@@ -36,8 +36,13 @@ export const PFP_LAYOUT = {
    */
   scrim: { x: 0, y: 700, width, height: 380 },
 
-  /** Bottom lockup bar. Survives as a silhouette at 48px avatar size. */
-  bar: { x: 0, y: 912, width, height: 168, ruleWidth: 4 },
+  /**
+   * Bottom lockup bar. At 48px avatar size the type is illegible by design —
+   * what has to survive is the SILHOUETTE: dark band, yellow rule, ink
+   * keyline, yellow sun. A 4px rule scales to 0.18px and disappeared
+   * entirely, so the whole badge read as one muddy strip. 10px holds.
+   */
+  bar: { x: 0, y: 912, width, height: 168, ruleWidth: 10 },
 
   eventLine: {
     x: 52,
@@ -82,6 +87,9 @@ export const PFP_LAYOUT = {
     strokeWidth: 5,
   },
 
-  /** Corner brackets: poster registration marks, cheap and distinctive. */
-  corners: { inset: 52, length: 74, width: 8 },
+  /**
+   * Corner registration brackets. Widened from 8px — at avatar scale a thin
+   * cream line over an unknown photo vanished into whatever was behind it.
+   */
+  corners: { inset: 46, length: 88, width: 12 },
 } as const

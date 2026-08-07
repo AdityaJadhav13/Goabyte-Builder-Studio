@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic'
 import { useEffect } from 'react'
+import { FormatShowcase } from '@/components/layout/FormatShowcase'
 import { Hero } from '@/components/layout/Hero'
 import { InlineError } from '@/components/ui/InlineError'
 import { StatusMessage } from '@/components/ui/StatusMessage'
@@ -65,7 +66,12 @@ export function EditorShell() {
 
       {editingNow ? <EditorWorkspace state={state} editor={editor} /> : null}
 
-      {state.phase === 'idle' ? <UploadDropzone onFile={editor.selectFile} /> : null}
+      {state.phase === 'idle' ? (
+        <div className="space-y-6">
+          <FormatShowcase />
+          <UploadDropzone onFile={editor.selectFile} />
+        </div>
+      ) : null}
     </div>
   )
 }

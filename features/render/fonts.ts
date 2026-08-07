@@ -16,13 +16,15 @@ export const FONT_DISPLAY = 'HHG Display'
 export const FONT_TEXT = 'HHG Text'
 
 /**
- * Fallbacks are metric-adjacent rather than arbitrary: if a face fails to
- * load, the layout degrades instead of collapsing. Templates read these, so
- * canvas and CSS can never reference a different stack.
+ * Fallbacks are METRIC-MATCHED, not arbitrary. `HHG * Fallback` are
+ * @font-face rules in globals.css carrying measured size-adjust and
+ * ascent/descent overrides, so a face that has not loaded yet occupies the
+ * same space as the one replacing it. Templates read this constant, so canvas
+ * and CSS can never reference a different stack.
  */
 export const FONT_STACK = {
-  display: `"${FONT_DISPLAY}", Georgia, "Times New Roman", serif`,
-  text: `"${FONT_TEXT}", ui-sans-serif, system-ui, -apple-system, sans-serif`,
+  display: `"${FONT_DISPLAY}", "HHG Display Fallback", Georgia, serif`,
+  text: `"${FONT_TEXT}", "HHG Text Fallback", ui-sans-serif, system-ui, sans-serif`,
 } as const
 
 /**

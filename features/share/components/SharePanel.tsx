@@ -21,6 +21,7 @@ import { canShareFile, copyCaptionOnly, openIntentWindow, shareFile } from '../s
 export function SharePanel({ exported }: { readonly exported: ExportedGraphic }) {
   const [status, setStatus] = useState<string | null>(null)
   const [blockedUrl, setBlockedUrl] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
   const [caption] = useState(DEFAULT_CAPTION)
 
   const nativeAvailable = canShareFile(exported.file)
@@ -99,6 +100,27 @@ export function SharePanel({ exported }: { readonly exported: ExportedGraphic })
           onClick={handleIntent}
         >
           Post on X
+        </Button>
+        {/*
+          FR-054 asks for a copy fallback. Copying only happened as a side
+          effect of opening X, which is no use to someone whose popup was
+          blocked or who wants to post from another device.
+        */}
+        <Button
+          variant="secondary"
+          onClick={() => {
+            void copyCaptionOnly(caption).then((ok) => {
+              setCopied(ok)
+              setStatus(
+                ok
+                  ? 'Caption copied.'
+                  : 'Copying is blocked here — select the caption above instead.',
+              )
+              if (ok) setTimeout(() => setCopied(false), 2500)
+            })
+          }}
+        >
+          {copied ? 'Copied' : 'Copy caption'}
         </Button>
       </div>
 

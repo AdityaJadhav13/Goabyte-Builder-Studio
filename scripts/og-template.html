@@ -1,0 +1,269 @@
+<!doctype html>
+<meta charset="utf-8" />
+<!--
+  Open Graph poster source. Rendered to app/opengraph-image.png by
+  scripts/generate-og.mjs — it is not part of the application bundle.
+
+  Palette values are duplicated here because this file is loaded outside the
+  build. tests/unit/og-parity.test.ts asserts they still match PALETTE, so the
+  duplication cannot drift silently.
+-->
+<style>
+  @font-face {
+    font-family: 'HHG Display';
+    src: url('../public/fonts/hhg-display-400.woff2') format('woff2');
+    font-weight: 400;
+  }
+  @font-face {
+    font-family: 'HHG Text';
+    src: url('../public/fonts/hhg-text-var.woff2') format('woff2-variations');
+    font-weight: 100 900;
+  }
+  :root {
+    --ink: #14110e;
+    --cream: #f7efe1;
+    --cream-dim: #eadfcb;
+    --green-900: #05221a;
+    --green-800: #0a3527;
+    --yellow: #f9c22e;
+    --pink: #ef3e76;
+  }
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  body {
+    width: 1200px;
+    height: 630px;
+    overflow: hidden;
+  }
+
+  .poster {
+    position: relative;
+    width: 1200px;
+    height: 630px;
+    background: var(--green-800);
+    border: 14px solid var(--ink);
+    padding: 62px 72px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    font-family: 'HHG Text', sans-serif;
+  }
+  .eyebrow {
+    font-weight: 700;
+    font-size: 22px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--yellow);
+  }
+  h1 {
+    font-family: 'HHG Display', serif;
+    font-weight: 400;
+    font-size: 132px;
+    line-height: 0.9;
+    color: var(--cream);
+  }
+  .tagline {
+    margin-top: 18px;
+    font-size: 32px;
+    color: var(--cream-dim);
+  }
+  .footer {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+  }
+  .meta {
+    font-weight: 700;
+    font-size: 20px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--cream-dim);
+  }
+  .tag {
+    font-family: 'HHG Display', serif;
+    font-size: 46px;
+    color: var(--pink);
+  }
+
+  /* Sun mark, matching the one the renderer draws. */
+  .sun {
+    position: absolute;
+    top: 58px;
+    right: 72px;
+    width: 132px;
+    height: 132px;
+  }
+  .sun i {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 5px;
+    height: 26px;
+    margin: -13px 0 0 -2.5px;
+    background: var(--ink);
+    border-radius: 3px;
+    /* Origin stays at the ray's own centre; the trailing translateY pushes it
+       outward along the rotated axis. Overriding the origin made every ray
+       collapse to the top. */
+  }
+  .sun b {
+    position: absolute;
+    inset: 30px;
+    border-radius: 50%;
+    background: var(--yellow);
+    border: 5px solid var(--ink);
+  }
+  /* Corner registration brackets. */
+  .bracket {
+    position: absolute;
+    width: 58px;
+    height: 58px;
+    border: 7px solid var(--cream);
+  }
+  .bracket.tl {
+    top: 34px;
+    left: 34px;
+    border-right: 0;
+    border-bottom: 0;
+  }
+  .bracket.bl {
+    bottom: 34px;
+    left: 34px;
+    border-right: 0;
+    border-top: 0;
+  }
+  .rule {
+    height: 6px;
+    background: var(--yellow);
+    margin: 26px 0 24px;
+  }
+
+  .formats {
+    display: flex;
+    gap: 34px;
+    align-items: flex-end;
+  }
+  .fmt {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .shape {
+    display: block;
+    background: var(--green-900);
+    border: 5px solid var(--ink);
+    box-shadow: 7px 7px 0 0 var(--ink);
+  }
+  .shape.square {
+    width: 116px;
+    height: 116px;
+  }
+  .shape.portrait {
+    width: 116px;
+    height: 145px;
+  }
+
+  /* Miniatures of the real templates. Empty boxes read as holes; these read
+     as "the graphics you make". */
+  .shape {
+    position: relative;
+    overflow: hidden;
+  }
+  .shape .photo {
+    position: absolute;
+    background: #163f30;
+  }
+  .shape.square .photo {
+    inset: 0 0 26px 0;
+  }
+  .shape.portrait .photo {
+    inset: 14px 12px 58px 12px;
+    border: 2px solid var(--ink);
+  }
+  .shape .lockup {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 26px;
+    background: var(--green-900);
+    border-top: 3px solid var(--yellow);
+  }
+  .shape .line {
+    position: absolute;
+    left: 12px;
+    background: var(--cream-dim);
+  }
+  .shape.portrait .name {
+    bottom: 38px;
+    width: 66px;
+    height: 9px;
+    background: var(--cream);
+  }
+  .shape.portrait .role {
+    bottom: 26px;
+    width: 44px;
+    height: 5px;
+  }
+  .shape.portrait .chip {
+    bottom: 10px;
+    width: 38px;
+    height: 10px;
+    background: var(--pink);
+    border: 2px solid var(--ink);
+  }
+  .fmt figcaption {
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--cream-dim);
+  }
+</style>
+
+<div class="poster">
+  <span class="bracket tl"></span>
+  <span class="bracket bl"></span>
+  <div class="sun" id="sun"><b></b></div>
+
+  <div>
+    <p class="eyebrow">GoaByte · Hacker House Goa 2026</p>
+    <h1>Builder&nbsp;Studio</h1>
+    <p class="tagline">Create your Hacker House Goa 2026 identity.</p>
+  </div>
+
+  <div class="formats">
+    <figure class="fmt">
+      <span class="shape square"><i class="photo"></i><i class="lockup"></i></span>
+      <figcaption>Profile picture · 1080×1080</figcaption>
+    </figure>
+    <figure class="fmt">
+      <span class="shape portrait"
+        ><i class="photo"></i><i class="line name"></i><i class="line role"></i
+        ><i class="line chip"></i
+      ></span>
+      <figcaption>Builder ID · 1080×1350</figcaption>
+    </figure>
+  </div>
+
+  <div>
+    <div class="rule"></div>
+    <div class="footer">
+      <p class="meta">Upload a photo · Framed automatically · No login</p>
+      <p class="tag">#FrameInGoa</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  // 12 rays, same count the canvas renderer uses.
+  const sun = document.getElementById('sun')
+  for (let i = 0; i < 12; i++) {
+    const ray = document.createElement('i')
+    ray.style.transform = `rotate(${i * 30}deg) translateY(-52px)`
+    sun.appendChild(ray)
+  }
+</script>

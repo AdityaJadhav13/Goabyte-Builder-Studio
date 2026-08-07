@@ -65,16 +65,38 @@ export function TextField({
         )}
       />
 
-      {error ? (
-        <p id={errorId} className="mt-1.5 flex items-start gap-1.5 text-sm text-pink">
-          <span aria-hidden>⚠</span>
-          {error}
-        </p>
-      ) : hint ? (
-        <p id={hintId} className="mt-1.5 text-xs text-cream-dim/70">
-          {hint}
-        </p>
-      ) : null}
+      <div className="mt-1.5 flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          {error ? (
+            <p id={errorId} className="flex items-start gap-1.5 text-sm text-pink">
+              <span aria-hidden>⚠</span>
+              {error}
+            </p>
+          ) : hint ? (
+            <p id={hintId} className="text-xs text-cream-dim/70">
+              {hint}
+            </p>
+          ) : null}
+        </div>
+
+        {/*
+          Typing stopped dead at the limit with no explanation — the keyboard
+          appeared broken. The counter only appears once it is close to
+          mattering, so it is an answer rather than clutter. aria-hidden
+          because the input's own maxLength is already announced.
+        */}
+        {maxLength !== undefined && value.length >= maxLength - 8 ? (
+          <span
+            aria-hidden
+            className={cn(
+              'shrink-0 font-mono text-xs tabular-nums',
+              value.length >= maxLength ? 'text-yellow' : 'text-cream-dim/60',
+            )}
+          >
+            {value.length}/{maxLength}
+          </span>
+        ) : null}
+      </div>
     </div>
   )
 }

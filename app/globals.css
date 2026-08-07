@@ -25,6 +25,36 @@
   font-display: swap;
 }
 
+/* ── Metric-matched fallbacks ──────────────────────────────────────────────
+   `font-display: swap` means the fallback paints first and the real face
+   replaces it, so any difference in width or height reflows the page. These
+   overrides make the fallback occupy the same space as the face it stands in
+   for, which is what turns a visible jump into an invisible substitution.
+
+   Values are MEASURED, not estimated: rendering the same string in each pair
+   at 100px gave a width ratio of 75.2% for Instrument Serif against Georgia
+   and 104.3% for Archivo against system-ui. Ascent and descent overrides are
+   the measured metrics divided by that ratio, because size-adjust scales them
+   too. Re-measure if either typeface is swapped. */
+
+@font-face {
+  font-family: 'HHG Display Fallback';
+  src: local('Georgia'), local('Times New Roman'), local('Times');
+  size-adjust: 75.2%;
+  ascent-override: 132%;
+  descent-override: 41%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: 'HHG Text Fallback';
+  src: local('Helvetica Neue'), local('Arial'), local('Roboto');
+  size-adjust: 104.3%;
+  ascent-override: 84%;
+  descent-override: 20%;
+  line-gap-override: 0%;
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
    DESIGN TOKENS — SOLE SOURCE OF TRUTH
    Tailwind v4 is CSS-first, so tokens live here and nowhere else.
@@ -50,8 +80,9 @@
   --color-pink-dim: #d22a60;
 
   /* — Type ——————————————————————————————————————————————————————————————— */
-  --font-display: 'HHG Display', 'Instrument Serif', Georgia, serif;
-  --font-sans: 'HHG Text', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: 'HHG Display', 'HHG Display Fallback', Georgia, serif;
+  --font-sans:
+    'HHG Text', 'HHG Text Fallback', ui-sans-serif, system-ui, -apple-system, sans-serif;
 
   /* — Radii. Poster print, not SaaS: tight, not pill-shaped. —————————————— */
   --radius-none: 0px;

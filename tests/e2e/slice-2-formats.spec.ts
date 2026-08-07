@@ -179,3 +179,19 @@ test('no horizontal scroll at 320px on the card format', async ({ page }) => {
   )
   expect(overflow).toBeLessThanOrEqual(0)
 })
+
+test('the caption can be copied without opening X (FR-054)', async ({
+  page,
+  context,
+}) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+  await upload(page, 'portrait.jpg')
+  await expect(previewOf(page, '1080×1080')).toBeVisible({ timeout: 20_000 })
+  await download(page)
+
+  await page.getByRole('button', { name: 'Copy caption' }).click()
+  await expect(page.getByText('Caption copied.')).toBeVisible()
+
+  const clipboard = await page.evaluate(() => navigator.clipboard.readText())
+  expect(clipboard).toContain('#FrameInGoa')
+})

@@ -127,8 +127,14 @@ export function EditorWorkspace({
         </div>
 
         <div className="order-1 space-y-4 lg:order-2 lg:sticky lg:top-6">
-          <h2 className="text-xs font-bold tracking-[0.18em] text-yellow uppercase">
-            Your graphic · {width}×{height}
+          {/* The primary label on the screen: the result outranks the
+              controls, so it gets cream and size rather than the same yellow
+              micro-caps everything else uses. */}
+          <h2 className="flex items-baseline gap-2 text-base font-bold text-cream">
+            Your graphic
+            <span className="font-mono text-xs font-normal tracking-wide text-cream-dim/60">
+              {width}×{height}
+            </span>
           </h2>
           <div style={{ maxWidth: PREVIEW_MAX_WIDTH_PX[format] }} className="lg:mx-auto">
             <PreviewCanvas
