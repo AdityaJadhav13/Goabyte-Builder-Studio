@@ -49,6 +49,18 @@ export const aspectOf = (format: OutputFormat): number => PHOTO_ASPECT[format]
 /** Preview backing stores are capped at 2× regardless of device DPR (FR-039). */
 export const PREVIEW_DPR_CAP = 2
 
+/**
+ * Widest the preview is allowed to render on a large screen, per format.
+ *
+ * Uncapped, the 4:5 card rendered ~800px tall on desktop, dominating the
+ * viewport and leaving the control column floating above 500px of dead space.
+ * Capping by format keeps both columns in the same visual register.
+ */
+export const PREVIEW_MAX_WIDTH_PX: Record<OutputFormat, number> = {
+  pfp: 520,
+  'builder-card': 430,
+}
+
 export interface BuilderFields {
   readonly name: string
   readonly role: string

@@ -23,9 +23,9 @@ export const viewport: Viewport = {
   themeColor: '#0a3527',
   width: 'device-width',
   initialScale: 1,
-  // Deliberately NOT maximum-scale=1: locking zoom breaks accessibility for
-  // low-vision users. The cropper handles its own gesture capture instead
-  // (NFR-013, NFR-014).
+  // Deliberately NOT maximum-scale=1: locking pinch-zoom breaks the page for
+  // low-vision users, and there is no gesture surface that needs protecting
+  // from it (NFR-014).
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

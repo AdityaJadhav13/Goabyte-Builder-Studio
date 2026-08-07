@@ -33,6 +33,7 @@ const schema = z.object({
   role: z
     .string()
     .trim()
+    .min(1, 'Add what you build — a Builder ID without it is half a card.')
     .max(MAX_ROLE, `Keep it under ${MAX_ROLE} characters so it fits the card.`),
   title: z.string().trim().max(MAX_TITLE),
 })

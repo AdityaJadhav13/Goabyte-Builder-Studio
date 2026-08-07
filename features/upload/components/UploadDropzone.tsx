@@ -16,9 +16,12 @@ import { MAX_FILE_BYTES } from '../validate-file'
 export function UploadDropzone({
   onFile,
   disabled,
+  label = 'Choose a photo',
 }: {
   readonly onFile: (file: File) => void
   readonly disabled?: boolean
+  /** After a rejection, "Try another photo" is the honest instruction. */
+  readonly label?: string
 }) {
   const inputId = useId()
   const [isDragActive, setDragActive] = useState(false)
@@ -65,13 +68,14 @@ export function UploadDropzone({
       )}
     >
       <span className="text-lg font-bold text-cream">
-        {isDragActive ? 'Drop it' : 'Choose a photo'}
+        {isDragActive ? 'Drop it' : label}
       </span>
-      <span className="text-sm text-cream-dim">
-        JPG, PNG, WebP or HEIC · up to {Math.round(MAX_FILE_BYTES / 1024 / 1024)} MB
+      <span className="max-w-xs text-sm leading-relaxed text-cream-dim">
+        Framed automatically — no cropping needed. Post it with{' '}
+        <span className="font-bold text-yellow">#FrameInGoa</span>.
       </span>
       <span className="text-xs text-cream-dim/70">
-        Your photo never leaves your device.
+        JPG, PNG, WebP or HEIC · up to {Math.round(MAX_FILE_BYTES / 1024 / 1024)} MB
       </span>
 
       <input

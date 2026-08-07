@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Builder Studio">
+  <rect width="64" height="64" fill="#0a3527"/>
+  <g stroke="#14110e" stroke-width="3.5" stroke-linecap="round">
+    <path d="M32 6v6M32 52v6M6 32h6M52 32h6M13.6 13.6l4.2 4.2M46.2 46.2l4.2 4.2M50.4 13.6l-4.2 4.2M17.8 46.2l-4.2 4.2"/>
+  </g>
+  <circle cx="32" cy="32" r="15" fill="#f9c22e" stroke="#14110e" stroke-width="3.5"/>
+</svg>

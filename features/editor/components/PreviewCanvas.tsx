@@ -22,10 +22,13 @@ import {
 export function PreviewCanvas({
   model,
   assets,
+  description,
   className,
 }: {
   readonly model: RenderModel
   readonly assets: RenderAssets
+  /** What is actually on the canvas, for people who cannot see it. */
+  readonly description?: string
   readonly className?: string
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -73,7 +76,11 @@ export function PreviewCanvas({
       // rather than ignored: the graphic is announced as an image with a
       // meaningful description (FR-041).
       role="img"
-      aria-label={`Preview of your ${designWidth}×${designHeight} Hacker House Goa graphic`}
+      aria-label={
+        description
+          ? `${description}. Preview at ${designWidth}×${designHeight}.`
+          : `Preview of your ${designWidth}×${designHeight} Hacker House Goa graphic`
+      }
       style={{ aspectRatio: `${designWidth} / ${designHeight}` }}
       className={className}
     />

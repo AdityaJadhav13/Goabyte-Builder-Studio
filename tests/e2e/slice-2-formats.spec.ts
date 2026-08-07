@@ -21,7 +21,7 @@ async function upload(page: Page, file: string) {
 }
 
 const previewOf = (page: Page, size: string) =>
-  page.getByRole('img', { name: new RegExp(`Preview of your ${size}`) })
+  page.getByRole('img', { name: new RegExp(`Preview at ${size}`) })
 
 /**
  * Click the LABEL, as a real user does. The input itself is `sr-only` and so
@@ -74,6 +74,9 @@ test('Builder ID requires a name before it can be generated', async ({ page }) =
   await expect(page.getByText(/Add your name/i)).toBeVisible()
 
   await page.getByLabel('Your name').fill('Aditya Jadhav')
+  // Role is required too — a card without it left a hole in the layout.
+  await expect(page.getByRole('button', { name: 'Download PNG' })).toBeDisabled()
+  await page.getByLabel('What you build').fill('Backend')
   await expect(page.getByRole('button', { name: 'Download PNG' })).toBeEnabled()
 })
 
@@ -120,6 +123,7 @@ test('long, emoji and Devanagari names all render without breaking the card', as
 
   for (const name of ['Aditya Ramchandra Deshpande Jr', '🚀 Builder 👨‍💻', 'आदित्य जाधव']) {
     await page.getByLabel('Your name').fill(name)
+    await page.getByLabel('What you build').fill('Backend')
     await expect(previewOf(page, '1080×1350')).toBeVisible()
     await expect(page.getByRole('button', { name: 'Download PNG' })).toBeEnabled()
   }
@@ -168,6 +172,7 @@ test('no horizontal scroll at 320px on the card format', async ({ page }) => {
   await expect(previewOf(page, '1080×1080')).toBeVisible({ timeout: 20_000 })
   await chooseFormat(page, 'Builder ID')
   await page.getByLabel('Your name').fill('Aditya Jadhav')
+  await page.getByLabel('What you build').fill('Backend')
 
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,

@@ -162,6 +162,30 @@ describe('Builder ID card', () => {
     expect(footerY(without)).toBeLessThan(footerY(withTitle))
   })
 
+  it('closes the gap when the role is empty too, not just the title', () => {
+    // A card with a name and nothing else looked broken rather than minimal:
+    // the layout reserved space for blocks that were not there.
+    const footerY = (fields: BuilderFields) =>
+      Math.max(
+        ...render('builder-card', 1, fields)
+          .callsOf('fillText')
+          .map((c) => Number(c.args[2])),
+      )
+
+    const full = footerY(FIELDS)
+    const noRole = footerY({ ...FIELDS, role: '' })
+    const bare = footerY({ ...FIELDS, role: '', title: null })
+
+    expect(noRole).toBeLessThan(full)
+    expect(bare).toBeLessThan(noRole)
+  })
+
+  it('omits the role entirely rather than drawing an empty line', () => {
+    const text = textOf(render('builder-card', 1, { ...FIELDS, role: '   ' }))
+    expect(text).toContain('Aditya Jadhav')
+    expect(text.some((t) => t.trim() === '')).toBe(false)
+  })
+
   it('draws the title chip with INK text, never cream — DESIGN_SYSTEM §3.3', () => {
     // cream-on-pink is 3.27:1 and fails AA. This is the pairing most likely to
     // be got wrong by someone working from a screenshot.

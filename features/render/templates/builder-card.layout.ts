@@ -85,10 +85,14 @@ export const CARD_LAYOUT = {
   },
 
   /**
-   * Vertical distance the footer rule and hashtag move UP when there is no
-   * builder title. The layout reflows; it never leaves a gap (FR-033).
+   * Vertical distance everything below moves UP when a block is absent.
+   *
+   * Both the role and the title are optional, and reserving their space when
+   * they are empty leaves a visible hole — a card with a name and nothing else
+   * looked broken rather than minimal. The layout closes up instead (FR-033).
    */
   titleChipReflow: 96,
+  roleReflow: 84,
 
   footer: {
     ruleY: 1266,

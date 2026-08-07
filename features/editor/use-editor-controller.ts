@@ -48,6 +48,21 @@ const DEFAULT_FORMAT: OutputFormat = 'pfp'
 
 const EMPTY_FIELDS: BuilderFields = { name: '', role: '', title: null }
 
+/**
+ * Floor on how long the preparing phase stays visible.
+ *
+ * A fast decode fired four stage messages in under 100ms, which reads as a
+ * glitch rather than as speed — the eye registers flicker, not performance.
+ * Holding the state briefly makes the same work feel deliberate. Applied only
+ * to the SUCCESS path: an error should surface the instant it is known.
+ */
+const MIN_PREPARING_MS = 420
+
+const settleAfter = (startedAt: number): Promise<void> => {
+  const remaining = MIN_PREPARING_MS - (performance.now() - startedAt)
+  return remaining > 0 ? new Promise((r) => setTimeout(r, remaining)) : Promise.resolve()
+}
+
 /** Wraps an exported PNG's object URL so a ResourceSlot can own it. */
 function ownedExport(exported: ExportedGraphic): ExportedGraphic & Releasable {
   let released = false
@@ -116,6 +131,7 @@ export function useEditorController(): EditorController {
   const selectFile = useCallback(
     (file: File) => {
       const runId = ++runIdRef.current
+      const startedAt = performance.now()
       const isStale = () => runId !== runIdRef.current
 
       dispatch({ type: 'file-selected', fileName: file.name })
@@ -176,6 +192,12 @@ export function useEditorController(): EditorController {
             image,
             DESIGN[DEFAULT_FORMAT].width,
           )
+
+          await settleAfter(startedAt)
+          if (isStale()) {
+            image.release()
+            return
+          }
 
           // adopt() and dispatch() run in the same synchronous block. React
           // batches synchronous updates, so no render can observe the window

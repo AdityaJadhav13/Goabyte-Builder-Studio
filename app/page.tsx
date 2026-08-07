@@ -23,27 +23,7 @@ export default function Home() {
       </header>
 
       <main className="mx-auto max-w-6xl px-5 py-10 sm:px-8 sm:py-14">
-        <div className="max-w-2xl">
-          <h1 className="font-display text-5xl leading-[0.92] text-cream sm:text-7xl">
-            Builder Studio
-          </h1>
-          <p className="mt-4 text-lg text-cream sm:text-xl">
-            Create your Hacker House Goa 2026 identity.
-          </p>
-          <p className="mt-3 max-w-md text-sm leading-relaxed text-cream-dim">
-            Upload a photo. We frame it automatically — no cropping. Download it, post it
-            with <span className="font-bold text-yellow">#FrameInGoa</span>.
-          </p>
-
-          <p className="mt-5 inline-flex items-center gap-2 border border-green-600 px-3 py-1.5 text-xs text-cream-dim">
-            <span aria-hidden>🔒</span>
-            Your photo never leaves your device.
-          </p>
-        </div>
-
-        <div className="mt-10">
-          <EditorShell />
-        </div>
+        <EditorShell />
       </main>
 
       <footer className="mt-8 border-t border-cream-dim/15">

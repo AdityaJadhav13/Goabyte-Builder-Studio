@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button'
 import { FormatSelector } from '@/components/ui/FormatSelector'
 import { InlineError } from '@/components/ui/InlineError'
 import { ReplacePhotoButton } from '@/features/upload/components/ReplacePhotoButton'
-import { DESIGN } from '@/features/render/types'
+import { DESIGN, PREVIEW_MAX_WIDTH_PX } from '@/features/render/types'
 import { canExport, type EditingState } from '../editor-state'
 import type { EditorController } from '../use-editor-controller'
 import { PreviewCanvas } from './PreviewCanvas'
@@ -66,6 +66,13 @@ export function EditorWorkspace({
   const isCard = format === 'builder-card'
   const ready = canExport(state)
 
+  // A screen-reader user cannot see the canvas, so the label has to carry what
+  // is actually on it — not just its dimensions (FR-041).
+  const description =
+    isCard && fields.name.trim()
+      ? `Builder ID card for ${fields.name.trim()}${fields.role.trim() ? `, ${fields.role.trim()}` : ''}`
+      : 'Hacker House Goa 2026 profile picture frame around your photo'
+
   return (
     <div className="space-y-8">
       <FormatSelector
@@ -79,7 +86,7 @@ export function EditorWorkspace({
           a share panel means a phone user scrolls past everything to see what
           they made. On desktop there is room for both, so the controls move
           left and the preview right. */}
-      <div className="flex flex-col gap-8 lg:grid lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)] lg:items-start">
+      <div className="flex flex-col gap-8 lg:grid lg:grid-cols-[minmax(0,400px)_minmax(0,1fr)] lg:items-start">
         <div className="order-2 space-y-6 lg:order-1">
           {isCard ? (
             <BuilderFieldsForm
@@ -112,7 +119,7 @@ export function EditorWorkspace({
 
           {!ready ? (
             <p className="text-sm text-cream-dim/70">
-              Add your name to generate your Builder ID.
+              Add your name and what you build to generate your Builder ID.
             </p>
           ) : null}
 
@@ -123,11 +130,14 @@ export function EditorWorkspace({
           <h2 className="text-xs font-bold tracking-[0.18em] text-yellow uppercase">
             Your graphic · {width}×{height}
           </h2>
-          <PreviewCanvas
-            model={model}
-            assets={state.assets}
-            className="w-full border-2 border-ink shadow-ink"
-          />
+          <div style={{ maxWidth: PREVIEW_MAX_WIDTH_PX[format] }} className="lg:mx-auto">
+            <PreviewCanvas
+              model={model}
+              assets={state.assets}
+              description={description}
+              className="w-full border-2 border-ink shadow-ink"
+            />
+          </div>
 
           {state.quality === 'soft' ? (
             <p className="border-l-[3px] border-yellow bg-green-900 px-4 py-3 text-sm text-cream-dim">

@@ -23,6 +23,10 @@ const VARIANTS: Record<Variant, string> = {
 export function Button({ variant = 'primary', className, ...props }: ButtonProps) {
   return (
     <button
+      // Explicit: a bare <button> inside a form defaults to submit, which
+      // would make Download reload the page the day one of these moves into
+      // the fields form.
+      type="button"
       {...props}
       className={cn(
         'inline-flex min-h-12 items-center justify-center border-2 px-5 py-3',

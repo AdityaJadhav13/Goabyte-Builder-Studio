@@ -89,6 +89,15 @@ export const isEditing = (state: EditorState): state is EditingState =>
 export const isBusy = (state: EditorState): boolean =>
   state.phase === 'preparing' || (isEditing(state) && state.isExporting)
 
-/** The card cannot render without a name; the PFP needs nothing. */
+/**
+ * The PFP needs nothing. The card needs a name AND a role.
+ *
+ * Role is required rather than optional because an empty one left the layout
+ * with a visible hole: closing the gap pushed the footer 180px off the bottom
+ * edge, and growing the photo to absorb it would have changed the well's
+ * aspect and invalidated the frame computed for it. A Builder ID without
+ * "what you build" is half a card in any case.
+ */
 export const canExport = (state: EditingState): boolean =>
-  state.format === 'pfp' || state.fields.name.trim().length > 0
+  state.format === 'pfp' ||
+  (state.fields.name.trim().length > 0 && state.fields.role.trim().length > 0)

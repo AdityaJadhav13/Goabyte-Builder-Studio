@@ -82,9 +82,12 @@ export function drawBuilderCard(target: RenderTarget, model: RenderModel): void 
   ctx.fillStyle = PALETTE.cream
   drawFittedText(ctx, name, L.name.x, L.name.topY)
 
-  // ── Role ─────────────────────────────────────────────────────────────────
+  // ── Role (optional) ──────────────────────────────────────────────────────
+  const roleText = fields?.role?.trim() ?? ''
+  const hasRole = roleText.length > 0
+
   const role = fitText(ctx, {
-    text: fields?.role ?? '',
+    text: roleText,
     fontFamily: L.role.fontFamily,
     fontWeight: L.role.fontWeight,
     fontSize: L.role.fontSize,
@@ -93,8 +96,13 @@ export function drawBuilderCard(target: RenderTarget, model: RenderModel): void 
     maxLines: L.role.maxLines,
     lineHeight: L.role.lineHeight,
   })
-  ctx.fillStyle = PALETTE['cream-dim']
-  drawFittedText(ctx, role, L.role.x, L.role.topY)
+  if (hasRole) {
+    ctx.fillStyle = PALETTE['cream-dim']
+    drawFittedText(ctx, role, L.role.x, L.role.topY)
+  }
+
+  // Everything below an absent block moves up to close the gap.
+  const roleShift = hasRole ? 0 : L.roleReflow
 
   // ── Builder title chip, or reflow without it ─────────────────────────────
   const title = fields?.title?.trim()
@@ -117,7 +125,7 @@ export function drawBuilderCard(target: RenderTarget, model: RenderModel): void 
       ctx,
       {
         x: L.titleChip.x,
-        y: L.titleChip.topY,
+        y: L.titleChip.topY - roleShift,
         width: chipText.width + L.titleChip.paddingX * 2,
         height: L.titleChip.height,
       },
@@ -134,13 +142,13 @@ export function drawBuilderCard(target: RenderTarget, model: RenderModel): void 
     ctx.fillText(
       chipText.lines[0] ?? '',
       L.titleChip.x + L.titleChip.paddingX,
-      L.titleChip.topY + L.titleChip.height * 0.68,
+      L.titleChip.topY - roleShift + L.titleChip.height * 0.68,
     )
     ctx.letterSpacing = '0px'
   }
 
-  // Everything below the chip moves up when there is no chip.
-  const shift = hasTitle ? 0 : L.titleChipReflow
+  // Footer closes up over every absent block, not just the chip.
+  const shift = roleShift + (hasTitle ? 0 : L.titleChipReflow)
 
   // ── Footer ───────────────────────────────────────────────────────────────
   fillRect(

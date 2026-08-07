@@ -1,6 +1,8 @@
 'use client'
 
 import dynamic from 'next/dynamic'
+import { useEffect } from 'react'
+import { Hero } from '@/components/layout/Hero'
 import { InlineError } from '@/components/ui/InlineError'
 import { StatusMessage } from '@/components/ui/StatusMessage'
 import { UploadDropzone } from '@/features/upload/components/UploadDropzone'
@@ -14,21 +16,14 @@ import { isEditing, type PreparationStage } from '../editor-state'
  * There is no crop step (D-9). Upload lands the user directly on a finished,
  * automatically framed result.
  *
- * The workspace is loaded on demand. Before a photo exists the landing view
- * needs a dropzone and nothing else, so it should not carry the render layer —
- * both templates, the text-fitting engine and the drawing primitives arrive
- * with the workspace chunk instead. That chunk is fetched while the photo is
- * being decoded, so it costs the user no visible time (NFR-002).
+ * The workspace is a separate chunk so the landing view does not carry the
+ * render layer (NFR-002). It is PREFETCHED as soon as a file is chosen, which
+ * means the download overlaps decoding and the user never sees a second
+ * loading state.
  */
-const EditorWorkspace = dynamic(
-  () => import('./EditorWorkspace').then((m) => m.EditorWorkspace),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="h-96 animate-pulse border-2 border-cream-dim/20" aria-hidden />
-    ),
-  },
-)
+const loadWorkspace = () => import('./EditorWorkspace').then((m) => m.EditorWorkspace)
+
+const EditorWorkspace = dynamic(loadWorkspace, { ssr: false })
 
 const STAGE_COPY: Record<PreparationStage, string> = {
   validating: 'Checking your photo…',
@@ -41,27 +36,36 @@ export function EditorShell() {
   const editor = useEditorController()
   const { state } = editor
 
-  if (state.phase === 'preparing') {
-    return (
-      <div className="flex min-h-[220px] flex-col justify-center gap-4 border-2 border-cream-dim/25 px-6 py-10">
-        <StatusMessage>{STAGE_COPY[state.stage]}</StatusMessage>
-        <p className="truncate text-xs text-cream-dim/60">{state.fileName}</p>
-      </div>
-    )
-  }
+  const preparing = state.phase === 'preparing'
+  const editingNow = isEditing(state)
 
-  if (state.phase === 'error') {
-    return (
-      <div className="space-y-4">
-        <InlineError error={state.error} />
-        <UploadDropzone onFile={editor.selectFile} />
-      </div>
-    )
-  }
+  // Fetch the workspace chunk while the photo is still decoding, so it is
+  // already resident by the time the editing phase renders.
+  useEffect(() => {
+    if (preparing) void loadWorkspace()
+  }, [preparing])
 
-  if (isEditing(state)) {
-    return <EditorWorkspace state={state} editor={editor} />
-  }
+  return (
+    <div className="space-y-8">
+      <Hero compact={preparing || editingNow} />
 
-  return <UploadDropzone onFile={editor.selectFile} />
+      {preparing ? (
+        <div className="flex min-h-[220px] flex-col justify-center gap-4 border-2 border-cream-dim/25 px-6 py-10">
+          <StatusMessage>{STAGE_COPY[state.stage]}</StatusMessage>
+          <p className="truncate text-xs text-cream-dim/60">{state.fileName}</p>
+        </div>
+      ) : null}
+
+      {state.phase === 'error' ? (
+        <div className="space-y-4">
+          <InlineError error={state.error} />
+          <UploadDropzone onFile={editor.selectFile} label="Try another photo" />
+        </div>
+      ) : null}
+
+      {editingNow ? <EditorWorkspace state={state} editor={editor} /> : null}
+
+      {state.phase === 'idle' ? <UploadDropzone onFile={editor.selectFile} /> : null}
+    </div>
+  )
 }

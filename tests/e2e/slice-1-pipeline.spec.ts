@@ -33,7 +33,7 @@ async function upload(page: Page, file: string) {
 }
 
 async function expectEditorReady(page: Page) {
-  await expect(page.getByRole('img', { name: /Preview of your 1080×1080/ })).toBeVisible({
+  await expect(page.getByRole('img', { name: /Preview at 1080×1080/ })).toBeVisible({
     timeout: 20_000,
   })
 }
@@ -160,7 +160,7 @@ test('the PFP graphic carries the required hashtag', async ({ page }) => {
   await expectEditorReady(page)
   // The tag is drawn INTO the graphic, so it travels with the image even when
   // a caption is lost somewhere between the share sheet and the post.
-  await expect(page.getByRole('img', { name: /Preview of your 1080×1080/ })).toBeVisible()
+  await expect(page.getByRole('img', { name: /Preview at 1080×1080/ })).toBeVisible()
 })
 
 test('no crop UI stands between upload and download (D-9)', async ({ page }) => {
@@ -213,7 +213,7 @@ test('replacing the image mid-session keeps a single working editor', async ({
 
   // Exactly one editor, one preview: the previous session was torn down, not
   // stacked on top of.
-  await expect(page.getByRole('img', { name: /Preview of your/ })).toHaveCount(1)
+  await expect(page.getByRole('img', { name: /Preview at/ })).toHaveCount(1)
   await expect(page.locator('input[type="file"]')).toHaveCount(1)
 })
 
@@ -224,7 +224,7 @@ test('start over returns to a clean idle state without reloading', async ({ page
   await page.getByRole('button', { name: 'Start over' }).click()
 
   await expect(page.getByText('Choose a photo')).toBeVisible()
-  await expect(page.getByRole('img', { name: /Preview of your/ })).toHaveCount(0)
+  await expect(page.getByRole('img', { name: /Preview at/ })).toHaveCount(0)
 
   await upload(page, 'portrait.jpg')
   await expectEditorReady(page)
