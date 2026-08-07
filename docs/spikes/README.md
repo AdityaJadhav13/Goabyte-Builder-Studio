@@ -29,9 +29,15 @@ A spike result that contradicts the plan is the spike working correctly. When th
 
 **Numbering note:** this scheme is canonical and matches `PRD.md` §11.1 as amended on 7 Aug 2026. The v0.1 PRD used a different order; it was superseded, not duplicated.
 
+## Harness URL
+
+**https://goabyte-builder-studio-n1gvuilqm.vercel.app/spikes**
+
+Publicly accessible — no login. Open it directly on the phone you are testing.
+
 ## How to run one
 
-1. Open the Vercel preview URL on the target device — **a real device, not a desktop emulator**. Responsive mode in DevTools does not reproduce iOS memory limits, HEIC support, or share-sheet behaviour, which are the three things most likely to hurt us.
+1. Open the harness URL on the target device — **a real device, not a desktop emulator**. Responsive mode in DevTools does not reproduce iOS memory limits, HEIC support, or share-sheet behaviour, which are the three things most likely to hurt us.
 2. Go to `/spikes` and pick the spike.
 3. Run each test. Record what you observe in the app, not just what the page prints — some findings (did the caption survive into the X compose box?) are only visible outside the browser.
 4. Tap **Copy as Markdown** and paste into the matching document's results table.

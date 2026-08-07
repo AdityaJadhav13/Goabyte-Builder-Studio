@@ -14,11 +14,12 @@ Upload a photo, get a branded PFP frame or a Builder ID card, download it, share
 
 **Day 0 — foundation.** Documentation, architecture, tooling and technical spikes. Product implementation begins at Slice 1.
 
-|            |                                                               |
-| ---------- | ------------------------------------------------------------- |
-| Submission | Hacker House Goa 2026 — Open Trial, Frame / ID Card Generator |
-| Deadline   | 23:59 IST, 13 Aug 2026 · team target 14:00 IST                |
-| Live URL   | _pending first production deploy_                             |
+|            |                                                                                         |
+| ---------- | --------------------------------------------------------------------------------------- |
+| Submission | Hacker House Goa 2026 — Open Trial, Frame / ID Card Generator                           |
+| Deadline   | 23:59 IST, 13 Aug 2026 · team target 14:00 IST                                          |
+| Deployment | https://goabyte-builder-studio-n1gvuilqm.vercel.app                                     |
+| Spikes     | [/spikes](https://goabyte-builder-studio-n1gvuilqm.vercel.app/spikes) — open on a phone |
 
 ## Team
 
@@ -116,15 +117,24 @@ Enumerated in [PRD.md](docs/PRD.md) NFR-037 and [ARCHITECTURE.md](docs/ARCHITECT
 
 ## Deployment
 
-Vercel, from `main`. Every pull request gets a preview URL — that is how design review and real-device testing happen.
+Vercel, connected to this GitHub repository. Every pull request gets a preview URL — that is how design review and real-device testing happen.
 
 ```bash
-pnpm verify        # lint + typecheck + test + build
+pnpm verify        # lint + typecheck + test + build — run before every push
 vercel             # preview deployment
 vercel --prod      # production
 ```
 
 The application is fully static; there are no runtime environment variables.
+
+**Deployment protection is disabled deliberately.** Vercel enables SSO protection on new projects, which redirects anonymous visitors to a login page. That is fatal for this submission — a judge cannot authenticate into our Vercel account, and PRD success criteria require the URL to work in a fresh incognito session. If a route ever starts returning `302` to `vercel.com/sso-api`, protection has been re-enabled; turn it off under **Project Settings → Deployment Protection**.
+
+Verify anonymous access after any deployment:
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" https://goabyte-builder-studio-n1gvuilqm.vercel.app
+# expect 200, never 302
+```
 
 ## Stack
 
