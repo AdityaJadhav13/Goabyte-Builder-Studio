@@ -1,0 +1,82 @@
+@import 'tailwindcss';
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DESIGN TOKENS — SOLE SOURCE OF TRUTH
+   Tailwind v4 is CSS-first, so tokens live here and nowhere else.
+   `lib/brand/palette.ts` mirrors these values for the canvas renderer, which
+   cannot import CSS. tests/unit/token-parity.test.ts parses this block and
+   fails the build if the two ever disagree.
+   See ARCHITECTURE §15 and DESIGN_SYSTEM.md.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@theme {
+  /* — Core palette ——————————————————————————————————————————————————————— */
+  --color-ink: #14110e;
+  --color-cream: #f7efe1;
+  --color-cream-dim: #eadfcb;
+  --color-sand: #e8d9bc;
+  --color-green-900: #05221a;
+  --color-green-800: #0a3527;
+  --color-green-700: #0f4a35;
+  --color-green-600: #16674a;
+  --color-yellow: #f9c22e;
+  --color-yellow-dim: #e0a91b;
+  --color-pink: #ef3e76;
+  --color-pink-dim: #d22a60;
+
+  /* — Type ——————————————————————————————————————————————————————————————— */
+  --font-display: 'HHG Display', 'Instrument Serif', Georgia, serif;
+  --font-sans: 'HHG Text', ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+  /* — Radii. Poster print, not SaaS: tight, not pill-shaped. —————————————— */
+  --radius-none: 0px;
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 8px;
+
+  /* — Ink borders. The defining structural motif of the system. —————————— */
+  --border-width-hair: 1px;
+  --border-width-ink: 2px;
+  --border-width-bold: 3px;
+}
+
+/* Hard offset shadow — letterpress/poster feel. Never a soft blurred shadow;
+   soft shadows read as generic SaaS and are explicitly rejected by the brief. */
+@utility shadow-ink {
+  box-shadow: 4px 4px 0 0 var(--color-ink);
+}
+@utility shadow-ink-sm {
+  box-shadow: 2px 2px 0 0 var(--color-ink);
+}
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  background-color: var(--color-green-800);
+  color: var(--color-cream);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  /* iOS: prevent the layout shifting under the home indicator (NFR-012) */
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Visible, high-contrast focus on every interactive element (NFR-016).
+   Yellow reads clearly on both the green surfaces and the cream cards. */
+:focus-visible {
+  outline: 3px solid var(--color-yellow);
+  outline-offset: 2px;
+}
+
+/* NFR-020 — all motion is opt-out at the platform level. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

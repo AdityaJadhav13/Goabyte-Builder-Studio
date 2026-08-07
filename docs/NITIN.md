@@ -7,6 +7,7 @@ You own the complete browser-facing implementation of GoaByte Builder Studio.
 Your job is to turn the approved product/design system into a fast, responsive, accessible, reliable Next.js application.
 
 You own frontend quality end-to-end:
+
 - pages,
 - components,
 - upload UX,
@@ -26,6 +27,7 @@ You own frontend quality end-to-end:
 ## 1. Stack
 
 Use:
+
 - Next.js 15 App Router
 - TypeScript strict mode
 - Tailwind CSS v4
@@ -48,6 +50,7 @@ Do not add another component library.
 Keep presentational components separate from feature logic.
 
 Suggested:
+
 ```text
 components/
   ui/
@@ -65,6 +68,7 @@ features/
 ```
 
 Examples:
+
 ```text
 UploadDropzone.tsx
 ImagePreview.tsx
@@ -86,6 +90,7 @@ Avoid 800-line page components.
 ## 3. Landing page
 
 Implement:
+
 - HH Goa-inspired visual shell,
 - clear headline,
 - one-sentence explanation,
@@ -94,6 +99,7 @@ Implement:
 - mobile-first layout.
 
 Performance:
+
 - do not load heavy image editor packages until needed if practical,
 - optimize decorative assets,
 - avoid autoplay background video.
@@ -103,6 +109,7 @@ Performance:
 ## 4. Upload UX
 
 Requirements:
+
 - file input + drag/drop where desktop supports it,
 - accept JPG/JPEG/PNG/HEIC/HEIF,
 - browser-friendly feedback,
@@ -110,6 +117,7 @@ Requirements:
 - clear replace/remove action.
 
 Client validation:
+
 - file exists,
 - allowed type,
 - size threshold,
@@ -120,6 +128,7 @@ Do not trust extension alone.
 Coordinate with Aditya on validation utility.
 
 States:
+
 - idle,
 - drag active,
 - reading,
@@ -138,6 +147,7 @@ User must never wonder if the app is frozen.
 Use `react-easy-crop`.
 
 Requirements:
+
 - drag image,
 - zoom,
 - maintain target aspect ratio based on output format,
@@ -150,6 +160,7 @@ PFP target aspect: 1:1.
 Builder card photo area may have different ratio; define with design.
 
 Important:
+
 - do not permanently reduce quality in preview stage,
 - preserve crop coordinates accurately,
 - re-upload resets crop state correctly,
@@ -162,6 +173,7 @@ Important:
 Define a typed editor model.
 
 Example:
+
 ```ts
 type OutputMode = 'pfp' | 'builder-card'
 
@@ -192,11 +204,13 @@ Revoke object URLs on replacement/unmount.
 Use React Hook Form + Zod.
 
 Fields:
+
 - name,
 - role / stack,
 - builder title (generated/selectable/editable according to PRD).
 
 Validation:
+
 - sensible max lengths,
 - trim whitespace,
 - reject meaningless empty required values,
@@ -212,6 +226,7 @@ Do not reject legitimate Indian names or non-ASCII text.
 The preview should closely match exported output.
 
 Requirements:
+
 - correct aspect ratio,
 - responsive sizing,
 - no blurry CSS scaling where avoidable,
@@ -227,6 +242,7 @@ If DOM preview differs from canvas export, document differences and minimize the
 ## 9. Download integration
 
 Download button:
+
 - disabled until output is renderable,
 - shows rendering/loading state,
 - requests export from image engine,
@@ -239,6 +255,7 @@ Example:
 Filename must sanitize unsafe characters.
 
 Handle:
+
 - render failure,
 - browser download quirks,
 - repeated clicks.
@@ -250,6 +267,7 @@ Handle:
 Implement a robust share experience.
 
 P0:
+
 - create pre-filled X intent URL,
 - text ALWAYS includes `#FrameInGoa`,
 - open safely in new tab/window,
@@ -264,6 +282,7 @@ Coordinate with Aditya if share-by-link / OG generation is implemented.
 ## 11. Responsive implementation
 
 Must work well at:
+
 - 375px,
 - 390/393px,
 - 768px,
@@ -271,6 +290,7 @@ Must work well at:
 - 1280px+.
 
 Test:
+
 - no horizontal scroll,
 - cropper visible,
 - action buttons reachable,
@@ -285,6 +305,7 @@ Mobile is not a compressed desktop version. Follow Lavitra’s mobile design.
 ## 12. Accessibility
 
 Implement:
+
 - semantic headings,
 - labels,
 - button names,
@@ -300,12 +321,14 @@ Implement:
 ## 13. Error handling
 
 Every async operation needs:
+
 - pending state,
 - success,
 - failure,
 - retry/recovery path.
 
 Examples:
+
 - HEIC conversion fails → tell user and allow another file.
 - image decode fails → reset cleanly.
 - render fails → do not leave spinner forever.
@@ -333,6 +356,7 @@ No blank screens.
 Agree on typed interfaces.
 
 Example:
+
 ```ts
 interface RenderRequest {
   mode: 'pfp' | 'builder-card'
@@ -360,6 +384,7 @@ Use exported functions/interfaces.
 ## 16. Integration contract with Lavitra
 
 Before implementing a screen, ensure you have:
+
 - Figma link/frame,
 - breakpoint behavior,
 - component states,
@@ -374,6 +399,7 @@ When unclear, do not invent random styling if it changes brand direction. Use re
 ## 17. Testing checklist
 
 You personally test:
+
 - JPG portrait,
 - JPG landscape,
 - PNG,
@@ -405,12 +431,14 @@ Use feature branches.
 Small PRs.
 
 Good examples:
+
 - `feature/upload-dropzone`
 - `feature/crop-editor`
 - `feature/builder-form`
 - `feature/share-x`
 
 PR description:
+
 - what changed,
 - screenshots,
 - how tested,
@@ -424,6 +452,7 @@ No giant “frontend complete” PR.
 ## 19. Definition of done for Nitin
 
 Frontend is done only when:
+
 - matches approved design,
 - responsive,
 - accessible,

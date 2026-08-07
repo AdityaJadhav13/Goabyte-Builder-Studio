@@ -1,0 +1,9 @@
+# Build-script approvals. pnpm 11 reads these here, not from package.json.
+# All three are standard toolchain packages:
+#   esbuild       — vitest's bundler
+#   sharp         — Next.js image pipeline
+#   unrs-resolver — eslint import resolution
+allowBuilds:
+  esbuild: true
+  sharp: true
+  unrs-resolver: true

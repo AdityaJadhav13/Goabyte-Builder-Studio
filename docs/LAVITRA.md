@@ -7,6 +7,7 @@ You own the visual and interaction quality of GoaByte Builder Studio.
 Your job is to make the product feel intentional, easy, recognizably Hacker House Goa 2026, and polished enough that a judge understands the value in seconds.
 
 You are not “just making Figma screens.” You own:
+
 - user flow,
 - design system,
 - brand translation,
@@ -26,6 +27,7 @@ You are not “just making Figma screens.” You own:
 Study the official hhgoa.com visual language and supplied screenshots.
 
 Document:
+
 - dominant deep green,
 - yellow highlights,
 - hot pink accent,
@@ -38,6 +40,7 @@ Document:
 - playful but structured visual rhythm.
 
 Avoid:
+
 - generic SaaS dashboard look,
 - blue/purple AI gradients,
 - glassmorphism everywhere,
@@ -54,13 +57,16 @@ Create a short `BRAND_NOTES.md` or include this in the design system.
 Create one Figma file with pages:
 
 ### Page 00 — Cover
+
 - GoaByte Builder Studio
 - HH Goa 2026 Shortlisting Task
 - version/date
 - owner names
 
 ### Page 01 — Foundations
+
 Define:
+
 - palette,
 - typography,
 - spacing,
@@ -74,7 +80,9 @@ Define:
 - mobile safe areas.
 
 ### Page 02 — Components
+
 Design:
+
 - header/nav,
 - format selector,
 - upload dropzone,
@@ -95,6 +103,7 @@ Design:
 - reset/edit controls.
 
 Every component must have:
+
 - default,
 - hover,
 - focus,
@@ -102,7 +111,9 @@ Every component must have:
 - error where applicable.
 
 ### Page 03 — Desktop Flow
+
 Screens:
+
 1. Landing
 2. File selected
 3. Crop/edit
@@ -113,8 +124,10 @@ Screens:
 8. Error examples
 
 ### Page 04 — Mobile Flow
+
 At minimum 375px width.
 Screens:
+
 1. landing,
 2. upload,
 3. crop,
@@ -124,7 +137,9 @@ Screens:
 7. share/download.
 
 ### Page 05 — Output Templates
+
 Design actual export-ready graphic systems:
+
 - PFP 1080×1080
 - Builder ID target dimension chosen and documented
 
@@ -137,6 +152,7 @@ Do not just draw webpage previews. Create real graphic layout specs with exact c
 The photo is the hero.
 
 The frame should:
+
 - not obscure the face,
 - be unmistakably HH Goa,
 - work with light and dark photos,
@@ -147,6 +163,7 @@ The frame should:
 Design at least 2 concepts, then select 1 production concept with the team.
 
 Possible motifs:
+
 - tropical border,
 - yellow/pink editorial label,
 - Goa poster corner treatments,
@@ -160,6 +177,7 @@ Do not overcrowd the PFP.
 ## 4. Builder ID Card requirements
 
 Must contain:
+
 - photo,
 - name,
 - role / stack,
@@ -170,6 +188,7 @@ Must contain:
 Design for social sharing, not for printing.
 
 Need:
+
 - strong hierarchy,
 - controlled text wrapping,
 - fallback for long names,
@@ -179,6 +198,7 @@ Need:
 - readable output on phone.
 
 Define truncation / resizing rules:
+
 - name max visual lines,
 - role max lines,
 - builder title max lines,
@@ -191,6 +211,7 @@ Define truncation / resizing rules:
 The user should understand what to do without reading instructions.
 
 Desired flow:
+
 1. Upload photo
 2. Pick PFP or Builder ID
 3. Adjust crop only if needed
@@ -209,6 +230,7 @@ Do not require a tutorial.
 ## 6. Copywriting
 
 Write concise copy for:
+
 - hero,
 - upload prompt,
 - file requirements,
@@ -229,6 +251,7 @@ Write concise copy for:
 - reset.
 
 Tone:
+
 - confident,
 - builder-centric,
 - playful but not childish,
@@ -244,6 +267,7 @@ Provide at least 3 share-copy variants to engineering, but one should be the def
 ## 7. Asset handoff
 
 Every exported asset must have:
+
 - meaningful filename,
 - correct format (SVG for vectors, PNG/WebP where raster required),
 - exact intended dimensions,
@@ -252,6 +276,7 @@ Every exported asset must have:
 - no duplicate “final2.png” style names.
 
 Suggested:
+
 ```text
 hhgoa-pfp-frame-v1.svg
 hhgoa-card-corner-palm.svg
@@ -267,11 +292,13 @@ Provide a handoff table:
 ## 8. Responsive specification
 
 Specify:
+
 - 375px mobile,
 - 768px tablet,
 - 1024px/1280px desktop.
 
 For every major screen define:
+
 - stacking order,
 - margins,
 - control width,
@@ -288,6 +315,7 @@ No horizontal overflow.
 ## 9. Accessibility / usability
 
 Check:
+
 - visible focus states,
 - color contrast,
 - non-color error indicators,
@@ -306,6 +334,7 @@ Check:
 When Nitin implements screens, compare implementation to Figma.
 
 Create visual QA checklist:
+
 - spacing,
 - font,
 - line-height,
@@ -322,6 +351,7 @@ Create visual QA checklist:
 - loading.
 
 Log issues with:
+
 - screenshot,
 - expected,
 - actual,
@@ -337,6 +367,7 @@ Do not say “looks slightly off.” Give measurable corrections.
 Find at least 5 people not involved in implementation.
 
 Ask them to:
+
 1. generate a PFP,
 2. generate an ID,
 3. download,
@@ -345,6 +376,7 @@ Ask them to:
 Do not guide them unless they are completely stuck.
 
 Record:
+
 - time to first successful output,
 - points of confusion,
 - misclicks,
@@ -358,6 +390,7 @@ Fix repeated issues.
 ## 12. Daily deliverables
 
 ### Day 1
+
 - visual research
 - design tokens
 - complete user flow
@@ -366,6 +399,7 @@ Fix repeated issues.
 - first Builder ID concepts
 
 ### Day 2
+
 - final desktop/mobile UI
 - component specs
 - production PFP
@@ -373,6 +407,7 @@ Fix repeated issues.
 - handoff assets
 
 ### Day 3+
+
 - implementation reviews
 - visual bug reports
 - usability tests
@@ -383,6 +418,7 @@ Fix repeated issues.
 ## 13. Definition of done for Lavitra
 
 Your design work is done only when:
+
 - all screens are designed,
 - mobile is designed,
 - edge/error states exist,

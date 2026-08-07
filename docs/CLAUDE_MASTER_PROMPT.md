@@ -13,6 +13,7 @@ Your job is NOT to blindly generate code. Your job is to create a professional p
 Team name: **GoaByte**
 
 Members:
+
 - **Aditya** — Team Lead + Backend / Architecture / Integration / Deployment
 - **Nitin Gupta** — Frontend Engineer
 - **Lavitra Satam** — Product Designer / UI-UX / Visual QA / Brand System
@@ -26,6 +27,7 @@ Aditya is the final technical and product decision maker and owns integration, d
 Hacker House Goa 2026 is positioned as an AI × Crypto builder residency in Goa, India, running **28–31 October 2026**.
 
 The official selection framework describes:
+
 - A rolling challenge model rather than a single passive application.
 - Open Trials in August 2026.
 - Partner Trials in September 2026.
@@ -40,6 +42,7 @@ The official selection framework describes:
 - Task performance is the main signal.
 
 The official visual identity shown on hhgoa.com uses a strong Goa-retro/editorial aesthetic:
+
 - deep tropical green backgrounds,
 - bright yellow,
 - hot pink / magenta,
@@ -65,6 +68,7 @@ We are building a **Frame / ID Card Generator**.
 The required product is a web tool where a user uploads a photo and instantly receives a branded HH Goa 2026 graphic that can be downloaded and shared on X.
 
 The task permits:
+
 - **Format A: PFP Frame / Overlay**
 - **Format B: Builder ID Card**
 - We will implement BOTH, but quality and reliability have priority over feature count.
@@ -119,6 +123,7 @@ The task permits:
 Working title: **GoaByte Builder Studio**
 
 Suggested product positioning:
+
 > Create your Hacker House Goa 2026 builder identity in seconds.
 
 The product should feel like an **official-quality identity studio**, even though it is a challenge submission.
@@ -154,22 +159,26 @@ No technical complexity for its own sake.
 Do not change this stack unless there is a documented technical blocker.
 
 ## Core
+
 - Next.js 15
 - App Router
 - TypeScript
 - pnpm
 
 ## UI
+
 - Tailwind CSS v4
 - shadcn/ui where useful
 - Lucide React
 - Framer Motion only for subtle, purposeful motion
 
 ## Forms / validation
+
 - React Hook Form
 - Zod
 
 ## State
+
 - React `useState`
 - `useReducer` for complex editor state if needed
 - Context only for genuinely shared state
@@ -177,24 +186,29 @@ Do not change this stack unless there is a documented technical blocker.
 - No Zustand unless a proven requirement appears
 
 ## Image handling
+
 - HTML5 Canvas API as primary rendering mechanism
 - `react-easy-crop` for crop / zoom / reposition
 - `heic2any` for HEIC/HEIF conversion where browser compatibility permits
 - Prefer client-side processing to minimize latency and infrastructure
 
 ## Backend
+
 - Next.js Route Handlers only where server functionality is truly required
 - No separate Express/Nest server
 - No database for MVP
 - No auth
 
 ## Deployment
+
 - Vercel
 
 ## Source control
+
 - GitHub
 
 ## Quality
+
 - ESLint
 - Prettier
 - TypeScript strict mode
@@ -202,6 +216,7 @@ Do not change this stack unless there is a documented technical blocker.
 - integration/e2e tests for the critical user flow if time permits
 
 ## Design
+
 - Figma
 
 ---
@@ -211,6 +226,7 @@ Do not change this stack unless there is a documented technical blocker.
 The architecture must be professional, readable, and easy for judges or reviewers to understand.
 
 ## Principles
+
 1. Keep business logic outside React components.
 2. Use small, typed modules.
 3. Separate:
@@ -236,11 +252,12 @@ The architecture must be professional, readable, and easy for judges or reviewer
 14. No dead code, commented-out experiments, or secret keys in repo.
 15. No production console spam.
 16. Accessibility matters:
-   - keyboard,
-   - focus states,
-   - semantic labels,
-   - color contrast,
-   - alt text where relevant.
+
+- keyboard,
+- focus states,
+- semantic labels,
+- color contrast,
+- alt text where relevant.
 
 ---
 
@@ -344,6 +361,7 @@ Before writing implementation code, produce `docs/PRD.md`.
 The PRD must include:
 
 ## 7.1 Executive summary
+
 - problem,
 - user,
 - goal,
@@ -351,7 +369,9 @@ The PRD must include:
 - success criteria.
 
 ## 7.2 Scope
+
 ### P0 / must-have
+
 - image upload,
 - validation,
 - crop/reposition,
@@ -364,7 +384,9 @@ The PRD must include:
 - error states.
 
 ### P1 / strong differentiators
+
 Examples:
+
 - elegant live preview,
 - builder-title generator,
 - multiple polished HH Goa templates,
@@ -373,7 +395,9 @@ Examples:
 - subtle animation.
 
 ### P2 / optional only after P0+P1 are stable
+
 Examples:
+
 - extra template variants,
 - analytics,
 - saved sessions,
@@ -382,13 +406,17 @@ Examples:
 Explicitly reject scope creep.
 
 ## 7.3 User personas
+
 At minimum:
+
 - mobile-first participant,
 - developer using laptop,
 - organizer/judge testing quickly.
 
 ## 7.4 User journeys
+
 Describe all states:
+
 - first visit,
 - upload success,
 - invalid file,
@@ -401,13 +429,16 @@ Describe all states:
 - restart/edit.
 
 ## 7.5 Functional requirements
+
 Number every requirement:
 `FR-001`, `FR-002`, etc.
 
 ## 7.6 Non-functional requirements
+
 Number:
 `NFR-001`, etc.
 Must include:
+
 - performance,
 - mobile usability,
 - accessibility,
@@ -418,10 +449,13 @@ Must include:
 - deterministic rendering.
 
 ## 7.7 Acceptance criteria
+
 Each P0 feature must have explicit pass/fail acceptance criteria.
 
 ## 7.8 Edge cases
+
 Include:
+
 - 30MB image,
 - tiny image,
 - corrupted file,
@@ -444,7 +478,9 @@ Include:
 - desktop Safari where possible.
 
 ## 7.9 Success metrics
+
 Example targets:
+
 - first-time user understands product in <5s,
 - happy-path generation in <30s total user time,
 - render operation target <2s on normal device,
@@ -462,6 +498,7 @@ Create `docs/DESIGN_SYSTEM.md`.
 The UI must be inspired by the current hhgoa.com visual language without blindly cloning the website.
 
 ## Visual direction
+
 - deep Goa green as dominant brand surface,
 - vibrant yellow for primary emphasis,
 - hot pink / magenta for accent,
@@ -476,6 +513,7 @@ The UI must be inspired by the current hhgoa.com visual language without blindly
 - avoid standard SaaS dashboard look.
 
 ## The design system must define
+
 - colors with CSS variables,
 - spacing scale,
 - radii,
@@ -505,6 +543,7 @@ This is the most critical subsystem.
 Create `docs/IMAGE_ENGINE.md`.
 
 ## Input pipeline
+
 1. File selected.
 2. Validate:
    - MIME type,
@@ -521,6 +560,7 @@ Create `docs/IMAGE_ENGINE.md`.
 9. Export PNG.
 
 ## Rules
+
 - Never stretch an image.
 - Use cover/contain intentionally.
 - Preserve aspect ratio.
@@ -538,7 +578,9 @@ Create `docs/IMAGE_ENGINE.md`.
 - Ensure export waits for fonts and assets.
 
 ## Rendering
+
 Use pure renderer functions where possible:
+
 ```ts
 renderPfp(ctx, model, assets, config)
 renderBuilderCard(ctx, model, assets, config)
@@ -557,11 +599,13 @@ A browser cannot reliably attach an arbitrary local generated image directly int
 Therefore the implementation must be honest and robust.
 
 P0:
+
 - Download generated image.
 - “Share to X” opens pre-filled X compose text containing `#FrameInGoa`.
 - UX clearly tells user to attach the downloaded image if direct attachment is not technically possible.
 
 P1 option:
+
 - If implementing share-by-link, build a server-backed generated asset/link flow and ensure the page exposes correct Open Graph metadata/image.
 - Only implement this if it can be reliable before deadline.
 
@@ -592,6 +636,7 @@ The generated share text must ALWAYS contain `#FrameInGoa`.
 # 12. PERFORMANCE BUDGET
 
 Document targets in `docs/PERFORMANCE.md`:
+
 - keep landing bundle lean,
 - lazy-load heavy editor dependencies,
 - load `heic2any` only when required,
@@ -615,12 +660,14 @@ Create `docs/QA_PLAN.md`.
 ## Required manual matrix
 
 Browsers/devices where available:
+
 - Android Chrome
 - iPhone Safari
 - macOS/Windows Chrome
 - Safari desktop
 
 Photos:
+
 - portrait JPG
 - landscape JPG
 - square PNG
@@ -633,6 +680,7 @@ Photos:
 - very dark photo
 
 Fields:
+
 - short name
 - long name
 - Unicode/emoji
@@ -641,6 +689,7 @@ Fields:
 - punctuation
 
 Flow:
+
 - upload
 - crop
 - switch PFP ↔ Builder ID
@@ -651,7 +700,9 @@ Flow:
 - restart
 
 ## Automated tests
+
 Prioritize:
+
 - validation utilities,
 - crop math,
 - title generator,
@@ -668,6 +719,7 @@ E2E happy-path if time allows.
 Create `docs/SUBMISSION_CHECKLIST.md`.
 
 Must include:
+
 - production URL works in incognito,
 - no login required,
 - mobile tested,
@@ -701,7 +753,9 @@ Must include:
 # 15. TEAM OWNERSHIP
 
 ## ADITYA — Team Lead / Backend / Architecture / Integration
+
 Primary responsibilities:
+
 - requirements correctness,
 - architecture,
 - technical decisions,
@@ -717,7 +771,9 @@ Primary responsibilities:
 - final sign-off.
 
 ## NITIN — Frontend Engineer
+
 Primary responsibilities:
+
 - Next.js UI implementation,
 - responsive components,
 - uploader UI,
@@ -732,7 +788,9 @@ Primary responsibilities:
 - browser QA.
 
 ## LAVITRA — Product Designer / UI-UX / Brand / Visual QA
+
 Primary responsibilities:
+
 - Figma,
 - visual research,
 - information architecture,
@@ -755,6 +813,7 @@ Every owner is accountable for deliverables, not just activity.
 # 16. GIT / COLLABORATION RULES
 
 Use:
+
 - `main` — always deployable
 - `develop` — integration branch if team workflow truly needs it
 - feature branches:
@@ -765,6 +824,7 @@ Use:
   - `design/...` only if design assets are committed
 
 Rules:
+
 - small PRs,
 - descriptive commits,
 - no direct force-push to main,
@@ -779,6 +839,7 @@ Rules:
 # 17. DEFINITION OF DONE
 
 A feature is DONE only if:
+
 1. implemented,
 2. typed,
 3. handles error states,
@@ -799,6 +860,7 @@ A feature is DONE only if:
 You must create a detailed schedule from current date to deadline.
 
 Prefer:
+
 - Day 1: PRD, architecture, design foundation, repo setup, technical spike
 - Day 2: upload/crop + visual shell + renderer prototype
 - Day 3: PFP production implementation
@@ -830,14 +892,16 @@ Before writing production code, produce the following in this order:
 10. `docs/LAVITRA.md`
 11. `README.md`
 12. Initial issue/task breakdown with:
-   - owner,
-   - priority,
-   - dependency,
-   - acceptance criteria,
-   - estimate,
-   - risk.
+
+- owner,
+- priority,
+- dependency,
+- acceptance criteria,
+- estimate,
+- risk.
 
 Then stop and present:
+
 - architecture decisions,
 - unresolved questions,
 - risks,
@@ -852,19 +916,25 @@ Do NOT start massive implementation before the project plan is coherent.
 When approved, implement vertically:
 
 ## Vertical Slice 1
+
 Upload → crop → simple PFP preview → download.
 
 ## Vertical Slice 2
+
 Full HH Goa PFP frame.
 
 ## Vertical Slice 3
+
 Builder ID form → preview → export.
 
 ## Vertical Slice 4
+
 Share to X.
 
 ## Vertical Slice 5
+
 Polish:
+
 - mobile,
 - accessibility,
 - performance,
@@ -879,6 +949,7 @@ Every slice must remain deployable.
 # 21. DECISION-MAKING RULES
 
 When there is a tradeoff:
+
 1. Mandatory requirement beats optional feature.
 2. Reliability beats cleverness.
 3. User clarity beats technical novelty.
@@ -894,6 +965,7 @@ When there is a tradeoff:
 # 22. QUALITY BAR
 
 The judge should be able to:
+
 - open the URL,
 - understand it immediately,
 - upload a normal phone photo,
@@ -904,6 +976,7 @@ The judge should be able to:
 - feel that the team understands product design, engineering, and execution.
 
 The repository should communicate:
+
 - clear ownership,
 - deliberate architecture,
 - disciplined code,
@@ -915,6 +988,7 @@ The repository should communicate:
 # 23. YOUR FIRST RESPONSE TO ADITYA
 
 Start by giving:
+
 1. a concise understanding of the mission,
 2. a list of assumptions,
 3. the highest-risk technical items,

@@ -7,6 +7,7 @@ You own the correctness and delivery of the entire GoaByte submission.
 Your main job is not to write every line of code. Your job is to make sure the product ships, requirements are satisfied, every member is unblocked, integration is clean, production works, and the submission is valid.
 
 You have final ownership of:
+
 - requirements,
 - architecture,
 - image engine,
@@ -41,6 +42,7 @@ You have final ownership of:
 ## 2. Image engine ownership
 
 You own:
+
 - image validation utilities,
 - HEIC conversion strategy,
 - decode/orientation strategy,
@@ -64,6 +66,7 @@ Avoid a renderer that depends directly on UI component state.
 Use server code only when needed.
 
 Potential server needs:
+
 - dynamic OG/share pages,
 - generated-asset hosting,
 - optional telemetry endpoint.
@@ -81,6 +84,7 @@ No database unless a feature requires persistence.
 The browser cannot reliably attach a generated local image directly to an X compose intent.
 
 P0:
+
 - export/download image,
 - pre-filled X intent with `#FrameInGoa`,
 - honest user instruction to attach the downloaded graphic.
@@ -94,6 +98,7 @@ Never fake attached-image behavior.
 ## 5. Technical contracts
 
 Define types/interfaces before parallel implementation:
+
 - source image,
 - crop rectangle,
 - output mode,
@@ -109,6 +114,7 @@ Publish them early so Nitin can integrate without waiting.
 ## 6. Deployment
 
 Own Vercel:
+
 - production project,
 - env configuration,
 - preview deployments,
@@ -126,6 +132,7 @@ Test production in incognito and on mobile.
 ## 7. CI / quality
 
 Minimum gates:
+
 - `pnpm lint`
 - `pnpm typecheck`
 - `pnpm build`
@@ -139,13 +146,16 @@ Do not allow broken main branch.
 ## 8. Daily leadership cadence
 
 Morning:
+
 - 15-min status
 - each person: completed / today / blockers
 
 Midday:
+
 - integration checkpoint if needed
 
 Evening:
+
 - merge stable work
 - deploy preview
 - test one full happy path
@@ -157,6 +167,7 @@ Maintain a blocker list with owner + deadline.
 ## 9. Scope control
 
 P0 first:
+
 - upload
 - crop
 - PFP
@@ -167,6 +178,7 @@ P0 first:
 - error handling
 
 Do not allow:
+
 - auth
 - profiles
 - dashboards
@@ -180,6 +192,7 @@ Do not allow:
 ## 10. Final release process
 
 48–24h before deadline:
+
 - feature freeze
 - regression testing
 - production deployment
@@ -187,6 +200,7 @@ Do not allow:
 - fix only P0/P1 issues
 
 Submission day:
+
 - no major refactor
 - verify live URL
 - verify X caption
@@ -201,6 +215,7 @@ Submission day:
 ## 11. Definition of done for Aditya
 
 Your work is done only when:
+
 - all requirements are verified,
 - integration is stable,
 - production works,
