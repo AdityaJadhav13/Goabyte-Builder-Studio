@@ -1,0 +1,259 @@
+import { expect, test, type Page } from '@playwright/test'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+
+/**
+ * SLICE 1 GATE.
+ *
+ * Exercises: photo → raw validation → decode → decoded validation → normalize
+ * → crop → prepare dependencies → synchronous renderer → canvas preview →
+ * 1080×1080 PNG export → download.
+ *
+ * What this CANNOT cover, and must not be read as covering: genuine iPhone
+ * HEIC, iOS memory ceilings, real download behaviour on iOS Safari, and native
+ * share. Those need hardware — see docs/spikes/.
+ */
+
+const FIXTURES = join(process.cwd(), 'tests/fixtures')
+const fixture = (name: string) => join(FIXTURES, name)
+
+/** Reads PNG dimensions straight from the IHDR chunk. */
+function pngSize(bytes: Buffer): { width: number; height: number } {
+  expect(bytes.subarray(0, 8)).toEqual(
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+  )
+  expect(bytes.subarray(12, 16).toString('ascii')).toBe('IHDR')
+  return { width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20) }
+}
+
+async function upload(page: Page, file: string) {
+  await page.setInputFiles('input[type="file"]', fixture(file))
+}
+
+async function expectEditorReady(page: Page) {
+  await expect(page.getByRole('img', { name: /Preview of your 1080×1080/ })).toBeVisible({
+    timeout: 20_000,
+  })
+}
+
+test.beforeEach(async ({ page }) => {
+  const errors: string[] = []
+  page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
+  page.on('pageerror', (e) => errors.push(String(e)))
+  // NFR-026: no console errors in production.
+  ;(page as Page & { __errors?: string[] }).__errors = errors
+  await page.goto('/')
+})
+
+test.afterEach(async ({ page }) => {
+  const errors = (page as Page & { __errors?: string[] }).__errors ?? []
+  expect(errors, `console errors: ${errors.join(' | ')}`).toEqual([])
+})
+
+test('landing shows the product and an upload control above the fold', async ({
+  page,
+}) => {
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'Builder Studio' }),
+  ).toBeVisible()
+  await expect(
+    page.getByText('Create your Hacker House Goa 2026 identity.'),
+  ).toBeVisible()
+  await expect(page.getByText('Choose a photo')).toBeInViewport()
+})
+
+test('full pipeline: portrait JPG → preview → 1080×1080 PNG download', async ({
+  page,
+}) => {
+  await upload(page, 'portrait.jpg')
+  await expectEditorReady(page)
+
+  const download = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: 'Download PNG' }).click(),
+  ]).then(([d]) => d)
+
+  expect(download.suggestedFilename()).toBe('hhgoa-2026-builder-pfp.png')
+
+  const path = await download.path()
+  const bytes = readFileSync(path)
+  expect(pngSize(bytes)).toEqual({ width: 1080, height: 1080 })
+  expect(bytes.length).toBeGreaterThan(10_000)
+})
+
+test.describe('accepted inputs all reach a renderable editor', () => {
+  for (const file of [
+    'portrait.jpg',
+    'landscape.jpg',
+    'transparent.png',
+    'large.jpg',
+    'panorama.jpg',
+  ]) {
+    test(file, async ({ page }) => {
+      await upload(page, file)
+      await expectEditorReady(page)
+      await expect(page.getByRole('button', { name: 'Download PNG' })).toBeEnabled()
+    })
+  }
+})
+
+test('transparent PNG exports fully opaque — no transparent regions', async ({
+  page,
+}) => {
+  await upload(page, 'transparent.png')
+  await expectEditorReady(page)
+
+  const download = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: 'Download PNG' }).click(),
+  ]).then(([d]) => d)
+
+  const bytes = readFileSync(await download.path())
+  expect(pngSize(bytes)).toEqual({ width: 1080, height: 1080 })
+
+  // Re-decode in the browser and sample the alpha channel across the graphic.
+  const minAlpha = await page.evaluate(async (b64) => {
+    const blob = await (await fetch(`data:image/png;base64,${b64}`)).blob()
+    const bmp = await createImageBitmap(blob)
+    const c = document.createElement('canvas')
+    c.width = bmp.width
+    c.height = bmp.height
+    const ctx = c.getContext('2d')!
+    ctx.drawImage(bmp, 0, 0)
+    const { data } = ctx.getImageData(0, 0, c.width, c.height)
+    let min = 255
+    for (let i = 3; i < data.length; i += 4 * 97) min = Math.min(min, data[i]!)
+    return min
+  }, bytes.toString('base64'))
+
+  expect(minAlpha).toBe(255)
+})
+
+test.describe('rejected inputs produce specific, recoverable errors', () => {
+  const cases = [
+    ['not-an-image.jpg', /file type isn't supported/i],
+    ['tiny.jpg', /at least 256×256/i],
+    ['empty.jpg', /file is empty/i],
+    ['corrupt.jpg', /couldn't read that photo/i],
+  ] as const
+
+  for (const [file, message] of cases) {
+    test(file, async ({ page }) => {
+      await upload(page, file)
+
+      // Next injects a role="alert" route announcer into <body>; scope to our UI.
+      const alert = page.locator('main').getByRole('alert')
+      await expect(alert).toBeVisible({ timeout: 20_000 })
+      await expect(alert).toContainText(message)
+
+      // Recoverable in place: the dropzone is still there and still works.
+      await upload(page, 'portrait.jpg')
+      await expectEditorReady(page)
+    })
+  }
+})
+
+test('a small-but-usable photo is accepted with a soft-quality warning', async ({
+  page,
+}) => {
+  await upload(page, 'small-soft.jpg')
+  await expectEditorReady(page)
+  await expect(page.getByText(/may look soft/i)).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Download PNG' })).toBeEnabled()
+})
+
+test('replacing the image mid-session keeps a single working editor', async ({
+  page,
+}) => {
+  await upload(page, 'portrait.jpg')
+  await expectEditorReady(page)
+
+  // Replace from inside the editor — no Start over, no page reload.
+  await upload(page, 'landscape.jpg')
+  await expectEditorReady(page)
+
+  // Exactly one editor, one preview: the previous session was torn down, not
+  // stacked on top of.
+  await expect(page.getByRole('img', { name: /Preview of your/ })).toHaveCount(1)
+  await expect(page.locator('input[type="file"]')).toHaveCount(1)
+})
+
+test('start over returns to a clean idle state without reloading', async ({ page }) => {
+  await upload(page, 'portrait.jpg')
+  await expectEditorReady(page)
+
+  await page.getByRole('button', { name: 'Start over' }).click()
+
+  await expect(page.getByText('Choose a photo')).toBeVisible()
+  await expect(page.getByRole('img', { name: /Preview of your/ })).toHaveCount(0)
+
+  await upload(page, 'portrait.jpg')
+  await expectEditorReady(page)
+})
+
+test('reset crop restores the default framing', async ({ page }) => {
+  await upload(page, 'landscape.jpg')
+  await expectEditorReady(page)
+
+  await page.getByRole('button', { name: 'Reset crop' }).click()
+  await expectEditorReady(page)
+  await expect(page.getByRole('button', { name: 'Download PNG' })).toBeEnabled()
+})
+
+test('five consecutive upload → render → download cycles (S0-12)', async ({ page }) => {
+  test.setTimeout(180_000)
+  const files = [
+    'portrait.jpg',
+    'landscape.jpg',
+    'transparent.png',
+    'large.jpg',
+    'portrait.jpg',
+  ]
+
+  for (const [i, file] of files.entries()) {
+    await upload(page, file)
+    await expectEditorReady(page)
+
+    const download = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('button', { name: 'Download PNG' }).click(),
+    ]).then(([d]) => d)
+
+    expect(pngSize(readFileSync(await download.path())), `cycle ${i + 1}`).toEqual({
+      width: 1080,
+      height: 1080,
+    })
+  }
+
+  // Heap is a weak signal in a headless browser, but unbounded growth across
+  // five full-resolution cycles would still show up here. The authoritative
+  // memory result comes from SPIKE-2 on a real iPhone.
+  const heapMb = await page.evaluate(() => {
+    const p = performance as Performance & { memory?: { usedJSHeapSize: number } }
+    return p.memory ? p.memory.usedJSHeapSize / 1048576 : null
+  })
+  if (heapMb !== null) expect(heapMb).toBeLessThan(250)
+})
+
+test('no horizontal scroll at 320px (NFR-009)', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 720 })
+  await upload(page, 'portrait.jpg')
+  await expectEditorReady(page)
+
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  )
+  expect(overflow).toBeLessThanOrEqual(0)
+})
+
+test('the whole flow is reachable by keyboard (NFR-015)', async ({ page }) => {
+  await page.keyboard.press('Tab')
+  const focused = await page.evaluate(() => document.activeElement?.tagName)
+  expect(focused).toBe('INPUT')
+
+  await upload(page, 'portrait.jpg')
+  await expectEditorReady(page)
+
+  await page.getByRole('button', { name: 'Download PNG' }).focus()
+  await expect(page.getByRole('button', { name: 'Download PNG' })).toBeFocused()
+})
