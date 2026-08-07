@@ -1,25 +1,34 @@
 'use client'
 
-import { useMemo } from 'react'
-import { Button } from '@/components/ui/Button'
+import dynamic from 'next/dynamic'
 import { InlineError } from '@/components/ui/InlineError'
 import { StatusMessage } from '@/components/ui/StatusMessage'
 import { UploadDropzone } from '@/features/upload/components/UploadDropzone'
-import { ReplacePhotoButton } from '@/features/upload/components/ReplacePhotoButton'
-import { DESIGN } from '@/features/render/types'
 import { useEditorController } from '../use-editor-controller'
 import { isEditing, type PreparationStage } from '../editor-state'
-import { PreviewCanvas } from './PreviewCanvas'
 
 /**
  * Routes editor phase → UI. One responsibility: deciding what is on screen.
  * It holds no pipeline logic and no editor state of its own.
  *
  * There is no crop step (D-9). Upload lands the user directly on a finished,
- * automatically framed result — the task brief is explicit that users should
- * not be assumed to crop first, and a required crop editor is a wall between
- * a phone user and their download.
+ * automatically framed result.
+ *
+ * The workspace is loaded on demand. Before a photo exists the landing view
+ * needs a dropzone and nothing else, so it should not carry the render layer —
+ * both templates, the text-fitting engine and the drawing primitives arrive
+ * with the workspace chunk instead. That chunk is fetched while the photo is
+ * being decoded, so it costs the user no visible time (NFR-002).
  */
+const EditorWorkspace = dynamic(
+  () => import('./EditorWorkspace').then((m) => m.EditorWorkspace),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-96 animate-pulse border-2 border-cream-dim/20" aria-hidden />
+    ),
+  },
+)
 
 const STAGE_COPY: Record<PreparationStage, string> = {
   validating: 'Checking your photo…',
@@ -31,25 +40,6 @@ const STAGE_COPY: Record<PreparationStage, string> = {
 export function EditorShell() {
   const editor = useEditorController()
   const { state } = editor
-
-  const editing = isEditing(state) ? state : null
-  const format = editing?.format ?? null
-  const image = editing?.image ?? null
-  const crop = editing?.crop ?? null
-
-  /**
-   * Referential stability matters: PreviewCanvas re-renders on model identity,
-   * so a fresh object literal every render would repaint the canvas on
-   * unrelated state changes such as the export flag toggling.
-   */
-  const model = useMemo(
-    () => (format && image && crop ? { format, image, crop } : null),
-    [format, image, crop],
-  )
-
-  if (state.phase === 'idle') {
-    return <UploadDropzone onFile={editor.selectFile} />
-  }
 
   if (state.phase === 'preparing') {
     return (
@@ -69,47 +59,9 @@ export function EditorShell() {
     )
   }
 
-  if (!editing || !model) return null
+  if (isEditing(state)) {
+    return <EditorWorkspace state={state} editor={editor} />
+  }
 
-  const { width, height } = DESIGN[editing.format]
-
-  return (
-    <div className="mx-auto max-w-lg space-y-6">
-      <div>
-        <h2 className="mb-3 text-xs font-bold tracking-[0.18em] text-yellow uppercase">
-          Your graphic · {width}×{height}
-        </h2>
-        {/* The result is the whole screen. Nothing stands between arriving and
-            downloading. */}
-        <PreviewCanvas
-          model={model}
-          assets={editing.assets}
-          className="w-full border-2 border-ink"
-        />
-      </div>
-
-      {editing.quality === 'soft' ? (
-        <p className="border-l-[3px] border-yellow bg-green-900 px-4 py-3 text-sm text-cream-dim">
-          This photo is on the small side, so your graphic may look slightly soft. A
-          larger photo will look sharper.
-        </p>
-      ) : null}
-
-      {editing.exportError ? <InlineError error={editing.exportError} /> : null}
-
-      <div className="flex flex-wrap gap-3">
-        <Button onClick={editor.download} disabled={editing.isExporting}>
-          {editing.isExporting ? 'Generating…' : 'Download PNG'}
-        </Button>
-        <ReplacePhotoButton onFile={editor.selectFile} disabled={editing.isExporting} />
-        <Button
-          variant="secondary"
-          onClick={editor.startOver}
-          disabled={editing.isExporting}
-        >
-          Start over
-        </Button>
-      </div>
-    </div>
-  )
+  return <UploadDropzone onFile={editor.selectFile} />
 }

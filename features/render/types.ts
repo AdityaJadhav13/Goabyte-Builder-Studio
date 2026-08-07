@@ -6,14 +6,14 @@ import type { NormalizedImage } from '@/lib/image/normalized-image'
  * ARCHITECTURE §5 — this is the integration contract.
  */
 
-/**
- * Slice 1 ships one format. `builder-card` is deliberately ABSENT rather than
- * declared-but-unimplemented: a union member with no template behind it would
- * force a runtime throw that lies about being supported. Adding it in Slice 3
- * is a one-line change, and the exhaustive switch in render-template.ts will
- * then point the compiler at every site that needs updating.
- */
-export type OutputFormat = 'pfp'
+export type OutputFormat = 'pfp' | 'builder-card'
+
+export const OUTPUT_FORMATS: readonly OutputFormat[] = ['pfp', 'builder-card']
+
+export const FORMAT_LABEL: Record<OutputFormat, string> = {
+  pfp: 'Profile picture',
+  'builder-card': 'Builder ID',
+}
 
 export interface OutputSize {
   readonly width: number
@@ -24,21 +24,44 @@ export interface OutputSize {
  * Export dimensions in design units. The ONLY place these numbers exist —
  * filenames, previews, quality warnings and tests all read them from here so
  * they cannot disagree (ADR-7).
+ *
+ * The card is 1080×1350 (4:5) per D-4. Critical content stays inside a
+ * conservative central safe region justified by overlays, reposts, embeds and
+ * thumbnails rather than by any single platform's current crop behaviour.
  */
 export const DESIGN: Record<OutputFormat, OutputSize> = {
   pfp: { width: 1080, height: 1080 },
+  'builder-card': { width: 1080, height: 1350 },
 }
 
-export const aspectOf = (format: OutputFormat): number =>
-  DESIGN[format].width / DESIGN[format].height
+/**
+ * Aspect of the PHOTO AREA, which is not the aspect of the output. The PFP is
+ * a full-bleed square; the card's photo well is 5:4 inside a 4:5 canvas.
+ * Automatic framing needs the photo aspect, never the canvas aspect.
+ */
+export const PHOTO_ASPECT: Record<OutputFormat, number> = {
+  pfp: 1,
+  'builder-card': 952 / 760,
+}
+
+export const aspectOf = (format: OutputFormat): number => PHOTO_ASPECT[format]
 
 /** Preview backing stores are capped at 2× regardless of device DPR (FR-039). */
 export const PREVIEW_DPR_CAP = 2
+
+export interface BuilderFields {
+  readonly name: string
+  readonly role: string
+  /** null ⇒ omit the chip and reflow; never render an empty chip (FR-033). */
+  readonly title: string | null
+}
 
 export interface RenderModel {
   readonly format: OutputFormat
   readonly image: NormalizedImage
   readonly crop: CropRect
+  /** Required for 'builder-card', ignored by 'pfp'. */
+  readonly fields: BuilderFields | null
 }
 
 export interface RenderTarget {

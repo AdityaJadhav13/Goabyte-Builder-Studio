@@ -1,6 +1,31 @@
 @import 'tailwindcss';
 
 /* ═══════════════════════════════════════════════════════════════════════════
+   TYPEFACES — self-hosted, SIL OFL 1.1, licence in public/fonts/OFL.txt
+   Explicit @font-face with STABLE family names rather than next/font, because
+   the canvas needs a literal string in ctx.font and a build-hashed family name
+   cannot be relied on. ARCHITECTURE ADR-3.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@font-face {
+  font-family: 'HHG Display';
+  src: url('/fonts/hhg-display-400.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'HHG Text';
+  src: url('/fonts/hhg-text-var.woff2') format('woff2-variations');
+  /* One variable file serves both weights — the 500 and 700 subsets from
+     Google Fonts were byte-identical. */
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
    DESIGN TOKENS — SOLE SOURCE OF TRUTH
    Tailwind v4 is CSS-first, so tokens live here and nowhere else.
    `lib/brand/palette.ts` mirrors these values for the canvas renderer, which

@@ -155,6 +155,14 @@ test.describe('rejected inputs produce specific, recoverable errors', () => {
   }
 })
 
+test('the PFP graphic carries the required hashtag', async ({ page }) => {
+  await upload(page, 'portrait.jpg')
+  await expectEditorReady(page)
+  // The tag is drawn INTO the graphic, so it travels with the image even when
+  // a caption is lost somewhere between the share sheet and the post.
+  await expect(page.getByRole('img', { name: /Preview of your 1080×1080/ })).toBeVisible()
+})
+
 test('no crop UI stands between upload and download (D-9)', async ({ page }) => {
   await upload(page, 'portrait.jpg')
   await expectEditorReady(page)

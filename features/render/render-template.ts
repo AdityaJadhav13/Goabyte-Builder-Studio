@@ -1,4 +1,5 @@
-import { drawPlaceholder } from './templates/placeholder.draw'
+import { drawBuilderCard } from './templates/builder-card.draw'
+import { drawPfp } from './templates/pfp.draw'
 import type { RenderAssets, RenderModel, RenderTarget } from './types'
 
 /**
@@ -34,11 +35,14 @@ export function renderTemplate(
 
   switch (model.format) {
     case 'pfp':
-      drawPlaceholder(target, model)
+      drawPfp(target, model)
       break
-    // No default: `OutputFormat` is a closed union, so adding 'builder-card'
-    // in Slice 3 makes this switch non-exhaustive and fails typecheck here —
-    // which is exactly the reminder we want.
+    case 'builder-card':
+      drawBuilderCard(target, model)
+      break
+    // No default: `OutputFormat` is a closed union, so adding a format makes
+    // this switch non-exhaustive and fails typecheck here — which is exactly
+    // the reminder we want.
   }
 
   ctx.restore()

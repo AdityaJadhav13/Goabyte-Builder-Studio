@@ -41,10 +41,15 @@ const editing = (overrides: Partial<EditingState> = {}): EditorState => ({
   image: image(),
   assets: ASSETS,
   format: 'pfp',
-  crop: { x: 0, y: 0, width: 1, height: 1 },
+  crops: {
+    pfp: { x: 0, y: 0, width: 1, height: 1 },
+    'builder-card': { x: 0, y: 0, width: 1, height: 0.8 },
+  },
   quality: 'ok',
+  fields: { name: '', role: '', title: null },
   isExporting: false,
   exportError: null,
+  exported: null,
   ...overrides,
 })
 
@@ -131,10 +136,19 @@ describe('framing', () => {
       image: image(),
       assets: ASSETS,
       format: 'pfp',
-      crop: { x: 5, y: -3, width: 2, height: 2 },
+      crops: {
+        pfp: { x: 5, y: -3, width: 2, height: 2 },
+        'builder-card': { x: -1, y: -1, width: 3, height: 3 },
+      },
       quality: 'ok',
+      fields: { name: '', role: '', title: null },
     })
-    expect(next).toMatchObject({ crop: { x: 0, y: 0, width: 1, height: 1 } })
+    expect(next).toMatchObject({
+      crops: {
+        pfp: { x: 0, y: 0, width: 1, height: 1 },
+        'builder-card': { x: 0, y: 0, width: 1, height: 1 },
+      },
+    })
   })
 })
 

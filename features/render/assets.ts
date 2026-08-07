@@ -23,11 +23,15 @@ const artCache = new Map<OutputFormat, ReadonlyMap<string, ImageBitmap>>()
  * a remote asset would taint the canvas and break toBlob (FR-045), and is
  * separately forbidden by the privacy invariant (NFR-037).
  *
- * EMPTY IN SLICE 1 — the placeholder template draws only shapes and text.
- * Slice 2 adds the frame art listed in DESIGN_SYSTEM §10.
+ * EMPTY BY DESIGN. Both production templates draw their marks with canvas
+ * primitives rather than loading SVGs: the sun and the corner brackets are a
+ * dozen calls each, they scale exactly with the design space, and shipping no
+ * art means no asset fetch to await and no decode before every render
+ * (FR-044). Add entries here only if a mark becomes genuinely illustrative.
  */
 const ART_MANIFEST: Record<OutputFormat, readonly string[]> = {
   pfp: [],
+  'builder-card': [],
 }
 
 async function loadArt(format: OutputFormat): Promise<ReadonlyMap<string, ImageBitmap>> {

@@ -31,6 +31,19 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
+      <head>
+        {/* The masthead uses the display face immediately, so preloading it
+            removes a visible swap on first paint (NFR-008). The text face is
+            not preloaded — it is needed slightly later and competing for
+            bandwidth on 4G would hurt LCP more than it helps. */}
+        <link
+          rel="preload"
+          href="/fonts/hhg-display-400.woff2"
+          as="font"
+          type="font/woff2"
+          crossOrigin="anonymous"
+        />
+      </head>
       <body>{children}</body>
     </html>
   )

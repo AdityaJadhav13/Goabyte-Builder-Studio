@@ -56,6 +56,9 @@ export function createRecordingContext(): RecordingContext {
     fillStyle: '#000000' as string | CanvasGradient | CanvasPattern,
     strokeStyle: '#000000' as string | CanvasGradient | CanvasPattern,
     lineWidth: 1,
+    lineCap: 'butt',
+    lineJoin: 'miter',
+    globalCompositeOperation: 'source-over',
     font: '10px sans-serif',
     textAlign: 'start',
     textBaseline: 'alphabetic',
@@ -80,10 +83,21 @@ export function createRecordingContext(): RecordingContext {
     moveTo: (...a: unknown[]) => record('moveTo', ...a),
     lineTo: (...a: unknown[]) => record('lineTo', ...a),
     arc: (...a: unknown[]) => record('arc', ...a),
+    arcTo: (...a: unknown[]) => record('arcTo', ...a),
+    ellipse: (...a: unknown[]) => record('ellipse', ...a),
+    quadraticCurveTo: (...a: unknown[]) => record('quadraticCurveTo', ...a),
+    bezierCurveTo: (...a: unknown[]) => record('bezierCurveTo', ...a),
     rect: (...a: unknown[]) => record('rect', ...a),
     fill: () => record('fill'),
     stroke: () => record('stroke'),
     clip: () => record('clip'),
+
+    createLinearGradient: (...a: unknown[]) => {
+      record('createLinearGradient', ...a)
+      // Gradients are opaque to layout assertions; a token stand-in keeps the
+      // call recorded without pretending to model colour interpolation.
+      return { addColorStop: () => {} } as unknown as CanvasGradient
+    },
 
     measureText: (text: string) => ({
       width: text.length * fontSizeOf(recorder.font) * APPROX_GLYPH_RATIO,

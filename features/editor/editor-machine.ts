@@ -4,22 +4,19 @@ import { IDLE_STATE, type EditorAction, type EditorState } from './editor-state'
 /**
  * The editor reducer. PURE: `(previousState, action) => nextState`.
  *
- * There is no crop action: framing is computed automatically and enters state
- * once, with image-ready (D-9). clampCrop still guards that entry point, so
- * FR-020's "out of bounds is impossible by construction" continues to hold.
- *
  * It does NOT call `NormalizedImage.release()`, `ImageBitmap.close()`,
  * `URL.revokeObjectURL()`, or any other side effect. Resource disposal is the
  * job of `use-editor-controller.ts`, which owns a ResourceSlot.
  *
- * That separation is what makes this file testable in plain Node with no DOM
- * and no fakes, and it is why a reducer bug can never leak memory.
+ * There is no crop action: framing is computed automatically and enters state
+ * with image-ready (D-9). clampCrop still guards that entry point, so FR-020's
+ * "out of bounds is impossible by construction" continues to hold.
  */
 export function editorReducer(state: EditorState, action: EditorAction): EditorState {
   switch (action.type) {
     case 'file-selected':
-      // Deliberately reachable from every phase: choosing a new file while
-      // one is loading, or after an error, must always start cleanly. The
+      // Deliberately reachable from every phase: choosing a new file while one
+      // is loading, or after an error, must always start cleanly. The
       // controller releases the outgoing image; this only describes state.
       return { phase: 'preparing', stage: 'validating', fileName: action.fileName }
 
@@ -40,11 +37,30 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
         image: action.image,
         assets: action.assets,
         format: action.format,
-        crop: clampCrop(action.crop),
+        crops: {
+          pfp: clampCrop(action.crops.pfp),
+          'builder-card': clampCrop(action.crops['builder-card']),
+        },
         quality: action.quality,
+        fields: action.fields,
         isExporting: false,
         exportError: null,
+        exported: null,
       }
+
+    case 'format-changed':
+      if (state.phase !== 'editing' || state.format === action.format) return state
+      // The exported graphic belongs to the previous format, so it is dropped.
+      // Keeping it would let the share panel offer a PFP while the preview
+      // shows a card. The controller revokes its object URL.
+      return { ...state, format: action.format, exported: null, exportError: null }
+
+    case 'fields-changed': {
+      if (state.phase !== 'editing') return state
+      const fields = { ...state.fields, ...action.fields }
+      // Editing a field invalidates any export made before the edit.
+      return { ...state, fields, exported: null }
+    }
 
     case 'export-started':
       // Ignoring the action while an export is in flight is what makes
@@ -54,7 +70,12 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
 
     case 'export-settled':
       if (state.phase !== 'editing') return state
-      return { ...state, isExporting: false, exportError: null }
+      return {
+        ...state,
+        isExporting: false,
+        exportError: null,
+        exported: action.exported,
+      }
 
     case 'export-failed':
       if (state.phase !== 'editing') return state
