@@ -6,8 +6,10 @@ import { join } from 'node:path'
  * SLICE 1 GATE.
  *
  * Exercises: photo → raw validation → decode → decoded validation → normalize
- * → crop → prepare dependencies → synchronous renderer → canvas preview →
- * 1080×1080 PNG export → download.
+ * → automatic framing → prepare dependencies → synchronous renderer → canvas
+ * preview → 1080×1080 PNG export → download.
+ *
+ * No crop step (D-9): upload lands directly on a finished result.
  *
  * What this CANNOT cover, and must not be read as covering: genuine iPhone
  * HEIC, iOS memory ceilings, real download behaviour on iOS Safari, and native
@@ -153,12 +155,41 @@ test.describe('rejected inputs produce specific, recoverable errors', () => {
   }
 })
 
+test('no crop UI stands between upload and download (D-9)', async ({ page }) => {
+  await upload(page, 'portrait.jpg')
+  await expectEditorReady(page)
+
+  // The download control is the primary action, reachable immediately.
+  await expect(page.getByRole('button', { name: 'Download PNG' })).toBeEnabled()
+  await expect(page.getByRole('button', { name: /crop/i })).toHaveCount(0)
+  await expect(page.getByText(/drag to reposition|pinch|zoom/i)).toHaveCount(0)
+})
+
+test('the same photo always produces an identical graphic (NFR-035)', async ({
+  page,
+}) => {
+  const sizes: number[] = []
+  for (let i = 0; i < 2; i++) {
+    await upload(page, 'landscape.jpg')
+    await expectEditorReady(page)
+    const dl = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('button', { name: 'Download PNG' }).click(),
+    ]).then(([d]) => d)
+    sizes.push(readFileSync(await dl.path()).length)
+    await page.getByRole('button', { name: 'Start over' }).click()
+  }
+  // Automatic framing is deterministic, so byte length is stable within one
+  // browser. (Across browsers only the pixels are guaranteed — D-5.)
+  expect(sizes[0]).toBe(sizes[1])
+})
+
 test('a small-but-usable photo is accepted with a soft-quality warning', async ({
   page,
 }) => {
   await upload(page, 'small-soft.jpg')
   await expectEditorReady(page)
-  await expect(page.getByText(/may look soft/i)).toBeVisible()
+  await expect(page.getByText(/may look slightly soft/i)).toBeVisible()
   await expect(page.getByRole('button', { name: 'Download PNG' })).toBeEnabled()
 })
 
@@ -189,15 +220,6 @@ test('start over returns to a clean idle state without reloading', async ({ page
 
   await upload(page, 'portrait.jpg')
   await expectEditorReady(page)
-})
-
-test('reset crop restores the default framing', async ({ page }) => {
-  await upload(page, 'landscape.jpg')
-  await expectEditorReady(page)
-
-  await page.getByRole('button', { name: 'Reset crop' }).click()
-  await expectEditorReady(page)
-  await expect(page.getByRole('button', { name: 'Download PNG' })).toBeEnabled()
 })
 
 test('five consecutive upload → render → download cycles (S0-12)', async ({ page }) => {

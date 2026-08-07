@@ -26,6 +26,7 @@ export interface EditingState {
   readonly image: NormalizedImage
   readonly assets: RenderAssets
   readonly format: OutputFormat
+  /** Computed automatically at image-ready. Never user-edited (D-9). */
   readonly crop: CropRect
   readonly quality: ImageQuality
   /**
@@ -67,11 +68,6 @@ export type EditorAction =
       readonly image: NormalizedImage
       readonly assets: RenderAssets
       readonly format: OutputFormat
-      readonly crop: CropRect
-      readonly quality: ImageQuality
-    }
-  | {
-      readonly type: 'crop-changed'
       readonly crop: CropRect
       readonly quality: ImageQuality
     }

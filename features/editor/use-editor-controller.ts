@@ -10,12 +10,7 @@ import { validateRawFile } from '@/features/upload/validate-file'
 import { appError, isAppError, type AppError } from '@/lib/errors/app-error'
 import { decodeImage } from '@/lib/image/decode'
 import { normalizeImage } from '@/lib/image/normalize'
-import {
-  clampCrop,
-  effectiveResolution,
-  smartDefaultCrop,
-  type CropRect,
-} from '@/lib/image/crop-geometry'
+import { autoFrame, effectiveResolution } from '@/lib/image/crop-geometry'
 import type { NormalizedImage } from '@/lib/image/normalized-image'
 import { ResourceSlot } from '@/lib/resource/resource-slot'
 import { editorReducer } from './editor-machine'
@@ -40,8 +35,6 @@ const DEFAULT_FORMAT: OutputFormat = 'pfp'
 export interface EditorController {
   readonly state: EditorState
   selectFile(file: File): void
-  changeCrop(crop: CropRect): void
-  resetCrop(): void
   download(): void
   startOver(): void
 }
@@ -104,12 +97,12 @@ export function useEditorController(): EditorController {
           dispatch({ type: 'stage-changed', stage: 'normalizing' })
           let image
           try {
-            image = await normalizeImage(decoded, file)
+            image = normalizeImage(decoded, file)
           } catch (cause) {
             // normalizeImage closes `decoded` on the success path only, so a
-            // failure part-way through (canvas allocation, toBlob) would
-            // otherwise leak a full-resolution decode — the exact thing that
-            // kills an iOS tab. close() is idempotent, so this is safe.
+            // failure part-way through (canvas allocation) would otherwise leak
+            // a full-resolution decode — the exact thing that kills an iOS tab.
+            // close() is idempotent, so this is safe.
             decoded.close()
             throw cause
           }
@@ -126,11 +119,9 @@ export function useEditorController(): EditorController {
             return
           }
 
-          const crop = smartDefaultCrop(
-            image.width,
-            image.height,
-            aspectOf(DEFAULT_FORMAT),
-          )
+          // Automatic framing (D-9). Deterministic, so the preview the user
+          // sees is exactly what downloads.
+          const crop = autoFrame(image.width, image.height, aspectOf(DEFAULT_FORMAT))
           const quality = effectiveResolution(crop, image, DESIGN[DEFAULT_FORMAT].width)
 
           // adopt() and dispatch() run in the same synchronous block. React
@@ -153,23 +144,6 @@ export function useEditorController(): EditorController {
     },
     [failPipeline],
   )
-
-  const changeCrop = useCallback((crop: CropRect) => {
-    const image = slotRef.current?.peek()
-    if (!image) return
-    const safe = clampCrop(crop)
-    dispatch({
-      type: 'crop-changed',
-      crop: safe,
-      quality: effectiveResolution(safe, image, DESIGN[DEFAULT_FORMAT].width),
-    })
-  }, [])
-
-  const resetCrop = useCallback(() => {
-    const image = slotRef.current?.peek()
-    if (!image) return
-    changeCrop(smartDefaultCrop(image.width, image.height, aspectOf(DEFAULT_FORMAT)))
-  }, [changeCrop])
 
   const download = useCallback(() => {
     if (!isEditing(state) || state.isExporting) return
@@ -198,7 +172,7 @@ export function useEditorController(): EditorController {
   }, [])
 
   return useMemo(
-    () => ({ state, selectFile, changeCrop, resetCrop, download, startOver }),
-    [state, selectFile, changeCrop, resetCrop, download, startOver],
+    () => ({ state, selectFile, download, startOver }),
+    [state, selectFile, download, startOver],
   )
 }

@@ -205,9 +205,11 @@ The caption always contains `#FrameInGoa`. We never say the image is attached un
 
 ### Crop
 
-- **FR-016** Provide drag-to-reposition and zoom via `react-easy-crop`, locked to the active format's aspect ratio (1:1 for PFP, per §5 card spec for Builder ID).
-- **FR-017** Apply a smart default crop centred horizontally and at ~42% of image height vertically, at minimum zoom that fills the frame.
-- **FR-018** Provide a Reset control returning to the smart default.
+- ~~**FR-016** Provide drag-to-reposition and zoom via `react-easy-crop`…~~ **SUPERSEDED by D-9.** No crop UI is rendered. `react-easy-crop` is removed from the dependency tree.
+- **FR-017** Frame automatically and deterministically: the largest region of the target aspect that fits the image, centred horizontally and biased to ~42% of image height vertically. This is _the_ framing, not a default a user overrides — there is no correction step, so it has to be right the first time.
+- ~~**FR-018** Provide a Reset control…~~ **SUPERSEDED by D-9.** Nothing to reset.
+- **FR-063** The primary flow is upload → automatic framing → preview → download. No step may be inserted between upload and a downloadable result. Replacing the photo and starting over are the only editor actions.
+- **FR-064** Framing is deterministic: the same photo always yields the same graphic, with no randomness or time dependence (NFR-035).
 - **FR-019** Store crop rectangles in normalized coordinates relative to the `NormalizedImage`, independently per format.
 - **FR-020** Clamp crop rectangles to image bounds; an out-of-bounds rectangle is impossible by construction, not by validation.
 - **FR-062** Derive effective output quality from the crop, not from the source image. When the selected crop region yields fewer than the export's target pixels along either axis (i.e. the render must upscale), show a non-blocking soft-quality warning stating that the result may look soft and suggesting the user zoom out or use a larger photo. Never silently upscale and imply the output is sharp. The warning threshold and copy are defined in the render config.
@@ -350,7 +352,7 @@ Each is a pass/fail gate. All must pass on production before submission.
 
 **S0-3 Decode** — PASS when a photo taken in portrait on an iPhone appears upright in the cropper, the preview, and the exported PNG. FAIL if any of the three is rotated.
 
-**S0-4 Crop** — PASS when drag and zoom work by touch and mouse, the aspect ratio stays locked, Reset restores the default, and switching format and back preserves both crops. FAIL on any crop-state loss.
+**S0-4 Automatic framing** — PASS when portrait, landscape, square, panoramic and off-centre photos each produce a well-framed 1:1 graphic with the subject intact and no distortion, with zero user interaction between choosing the photo and seeing the result; and when the same photo re-uploaded produces an identical graphic. FAIL if any common photo shape yields a decapitated or badly-framed subject, or if any step is required before the result appears.
 
 **S0-5 PFP** — PASS when the export is exactly 1080×1080, the frame is on-brand, the face is unobscured, and the result is recognisable at 48×48. FAIL on wrong dimensions or an obscured subject.
 
@@ -544,6 +546,14 @@ Binding decisions. Architecture and implementation follow these; changing one re
 **D-6 — Input caps approved, with the real guard named.** 32 MB file cap and 2400 px working cap stand as initial constraints. But **decoded dimensions, not file size, are the memory risk** (FR-061) — a compressed 15 MB JPEG can decode to hundreds of MB of raw pixels, so the file-size check is a cheap first filter and nothing more. Added FR-062: effective quality is derived from the crop, and a tight crop that would require upscaling produces an honest soft-quality warning rather than a silently soft export.
 
 **D-7 — HEIC strategy and Web Share behaviour are spike-gated.** The native-decode-first ordering (FR-010) and the file-share path (J10) are hypotheses until SPIKE-1 and SPIKE-3 close on real devices. `ARCHITECTURE.md` describes them as provisional. _Why:_ both depend on behaviour that varies by browser, OS version, and receiving application, and neither can be settled by reading a specification.
+
+**D-9 — Automatic framing replaces the crop editor.** _(7 Aug 2026, supersedes S0-4, FR-016, FR-018, J6.)_ The task brief states that the product must handle portrait, landscape, off-centre subjects and varying aspect ratios and must **not assume users will crop first**. A required crop step contradicts that directly, and on mobile it is a wall between a visitor and their download. The primary flow is now upload → automatic framing → preview → download, and it must feel one-click.
+
+_What this bought beyond UX:_ the crop editor was the only reason `NormalizedImage` carried an object URL, because `react-easy-crop` takes a URL rather than a drawable. Producing it meant a full `toBlob()` PNG encode of the working canvas — up to 2400×2400 — on **every upload**, on the devices least able to afford it. Removing the cropper deleted that encode, made `normalizeImage` synchronous, cut a resource from the ownership model, and dropped a dependency.
+
+_Trade-off, stated plainly:_ a user who dislikes the automatic framing has no recourse but to upload a different photo. That is a real cost, accepted because the 42% vertical bias handles ordinary phone photos well and because forcing a crop on everyone to serve a minority is the worse trade. **The mitigation is measurement, not assumption:** if usability testing shows automatic framing failing on real photos, an optional "Adjust position" panel ships as S1-8 — progressive enhancement, never a required step.
+
+_Consequence to watch:_ `VERTICAL_SUBJECT_BIAS` now carries the entire product. It is the difference between a good graphic and a decapitated one, with no manual correction available. It deserves explicit attention in usability testing.
 
 **D-8 — Privacy is an invariant, not a claim.** NFR-037 enumerates the prohibited mechanisms explicitly, so "your photo never leaves your device" is enforced by the absence of any code path that could violate it, not by intent.
 

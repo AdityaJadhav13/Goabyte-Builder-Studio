@@ -10,7 +10,6 @@ import { ResourceSlot } from '@/lib/resource/resource-slot'
 function stubImage(dispose: () => void) {
   return createNormalizedImage({
     source: {} as CanvasImageSource,
-    previewUrl: 'blob:stub',
     width: 1000,
     height: 1000,
     provenance: {

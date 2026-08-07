@@ -1,20 +1,22 @@
 import { PALETTE } from '@/lib/brand/palette'
-import { createSurface, releaseSurface, toPngBlob } from '@/lib/canvas/surface'
-import { appError } from '@/lib/errors/app-error'
+import { createSurface, releaseSurface } from '@/lib/canvas/surface'
 import type { DecodedImage } from '@/lib/image/decode'
 import { createNormalizedImage, type NormalizedImage } from '@/lib/image/normalized-image'
 
 /**
  * Decoded pixels → the one canonical working image.
  *
- * Three jobs, each closing a specific failure mode:
- *   1. Cap the size          — keeps iOS from killing the tab (R1, FR-012)
- *   2. Flatten onto opaque   — transparent PNGs would otherwise export with
- *                              transparent regions that look broken in X's
- *                              dark mode (FR-013)
- *   3. Produce a preview URL — react-easy-crop needs a URL, not a drawable
+ * Two jobs, each closing a specific failure mode:
+ *   1. Cap the size        — keeps iOS from killing the tab (R1, FR-012)
+ *   2. Flatten onto opaque — transparent PNGs would otherwise export with
+ *                            transparent regions that look broken in X's dark
+ *                            mode (FR-013)
  *
  * Orientation is NOT handled here. It was applied exactly once at decode.
+ *
+ * SYNCHRONOUS since D-9. It previously had to await a toBlob() PNG encode of
+ * the working canvas purely to hand react-easy-crop a URL — up to 2400×2400
+ * encoded on every upload, on the device least able to afford it.
  */
 
 /**
@@ -63,10 +65,7 @@ function downscale(
   return final.canvas
 }
 
-export async function normalizeImage(
-  decoded: DecodedImage,
-  file: File,
-): Promise<NormalizedImage> {
+export function normalizeImage(decoded: DecodedImage, file: File): NormalizedImage {
   const longestEdge = Math.max(decoded.width, decoded.height)
   const scale = Math.min(1, WORKING_MAX_EDGE / longestEdge)
   const width = Math.max(1, Math.round(decoded.width * scale))
@@ -90,17 +89,8 @@ export async function normalizeImage(
   // copy is exactly the two-full-resolution-decodes state that kills iOS tabs.
   decoded.close()
 
-  let previewUrl: string
-  try {
-    previewUrl = URL.createObjectURL(await toPngBlob(working.canvas))
-  } catch (cause) {
-    releaseSurface(working.canvas)
-    throw appError('DECODE_FAILED', { cause })
-  }
-
   return createNormalizedImage({
     source: working.canvas,
-    previewUrl,
     width,
     height,
     provenance: {
@@ -111,10 +101,6 @@ export async function normalizeImage(
       heicConverted: decoded.heicConverted,
       downscaled: scale < 1,
     },
-    // Both resources, one disposal (FR-015).
-    dispose: () => {
-      URL.revokeObjectURL(previewUrl)
-      releaseSurface(working.canvas)
-    },
+    dispose: () => releaseSurface(working.canvas),
   })
 }

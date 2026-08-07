@@ -18,7 +18,6 @@ const ASSETS: RenderAssets = { fonts: 'ready', art: new Map() }
 function model(overrides: Partial<RenderModel> = {}): RenderModel {
   const image = createNormalizedImage({
     source: {} as CanvasImageSource,
-    previewUrl: 'blob:stub',
     width: 2400,
     height: 2400,
     provenance: {

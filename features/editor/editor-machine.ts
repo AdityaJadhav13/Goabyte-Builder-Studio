@@ -4,6 +4,10 @@ import { IDLE_STATE, type EditorAction, type EditorState } from './editor-state'
 /**
  * The editor reducer. PURE: `(previousState, action) => nextState`.
  *
+ * There is no crop action: framing is computed automatically and enters state
+ * once, with image-ready (D-9). clampCrop still guards that entry point, so
+ * FR-020's "out of bounds is impossible by construction" continues to hold.
+ *
  * It does NOT call `NormalizedImage.release()`, `ImageBitmap.close()`,
  * `URL.revokeObjectURL()`, or any other side effect. Resource disposal is the
  * job of `use-editor-controller.ts`, which owns a ResourceSlot.
@@ -41,12 +45,6 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
         isExporting: false,
         exportError: null,
       }
-
-    case 'crop-changed':
-      if (state.phase !== 'editing') return state
-      // Every crop entering state passes through clampCrop, which is how
-      // FR-020's "out of bounds is impossible by construction" is delivered.
-      return { ...state, crop: clampCrop(action.crop), quality: action.quality }
 
     case 'export-started':
       // Ignoring the action while an export is in flight is what makes

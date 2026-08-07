@@ -1,12 +1,18 @@
 import type { SourceRect } from '@/lib/canvas/cover-fit'
 
 /**
- * All crop maths. Pure, DOM-free, and the highest-value unit-test target in
- * the codebase — a subtly wrong crop looks *nearly* right and survives review.
+ * Framing maths. Pure, DOM-free, and the highest-value unit-test target in the
+ * codebase — a subtly wrong frame looks *nearly* right and survives review.
  *
- * Crops are stored in NORMALIZED 0–1 coordinates relative to the working image
- * (FR-019). Not pixels: pixel coordinates are implicitly bound to a resolution,
- * so changing WORKING_MAX_EDGE would silently change what a stored crop means.
+ * There is no crop UI (D-9). These utilities now serve automatic framing and
+ * renderer positioning rather than a user-driven editor, which raises the
+ * stakes: nobody is going to nudge a bad result back into place by hand, so
+ * the computed frame has to be right the first time.
+ *
+ * Frames are expressed in NORMALIZED 0–1 coordinates relative to the working
+ * image (FR-019). Not pixels: pixel coordinates are implicitly bound to a
+ * resolution, so changing WORKING_MAX_EDGE would silently change what a stored
+ * frame means.
  */
 
 export interface CropRect {
@@ -23,21 +29,29 @@ export interface ImageDimensions {
 
 /**
  * Faces sit above the geometric centre in portrait photographs, so a true
- * centre crop routinely cuts foreheads. Biasing the default crop centre to 42%
- * of image height produces a good result for the majority who never touch the
- * cropper — which, on mobile, is most people.
+ * centre crop routinely cuts foreheads. Biasing the frame centre to 42% of
+ * image height produces a good result across ordinary phone photos.
  *
  * No face detection: the FaceDetector API is Chromium-flag-only and not a real
- * option. This costs nothing and is right far more often than centre.
- * PRD FR-017, improvement I4.
+ * option, and an ML model on the critical path would cost more than it earns.
+ *
+ * With automatic framing this constant carries the whole product: it is the
+ * difference between a good result and a decapitated one, with no manual
+ * correction available. PRD FR-017, improvement I4.
  */
 export const VERTICAL_SUBJECT_BIAS = 0.42
 
 const clamp = (value: number, min: number, max: number): number =>
   Math.min(Math.max(value, min), max)
 
-/** Largest region of the given aspect, centred horizontally, biased upward. */
-export function smartDefaultCrop(
+/**
+ * THE framing. Largest region of the target aspect that fits inside the image,
+ * centred horizontally and biased upward.
+ *
+ * Deterministic: identical inputs always produce an identical frame, so the
+ * preview a user sees is exactly what downloads (NFR-035).
+ */
+export function autoFrame(
   imageWidth: number,
   imageHeight: number,
   aspect: number,

@@ -1,13 +1,12 @@
 'use client'
 
-import dynamic from 'next/dynamic'
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { Button } from '@/components/ui/Button'
 import { InlineError } from '@/components/ui/InlineError'
 import { StatusMessage } from '@/components/ui/StatusMessage'
 import { UploadDropzone } from '@/features/upload/components/UploadDropzone'
 import { ReplacePhotoButton } from '@/features/upload/components/ReplacePhotoButton'
-import { aspectOf, DESIGN } from '@/features/render/types'
+import { DESIGN } from '@/features/render/types'
 import { useEditorController } from '../use-editor-controller'
 import { isEditing, type PreparationStage } from '../editor-state'
 import { PreviewCanvas } from './PreviewCanvas'
@@ -16,23 +15,16 @@ import { PreviewCanvas } from './PreviewCanvas'
  * Routes editor phase → UI. One responsibility: deciding what is on screen.
  * It holds no pipeline logic and no editor state of its own.
  *
- * The cropper is loaded on demand — react-easy-crop is dead weight on the
- * landing view, which is the only view most visitors ever see (NFR-002).
+ * There is no crop step (D-9). Upload lands the user directly on a finished,
+ * automatically framed result — the task brief is explicit that users should
+ * not be assumed to crop first, and a required crop editor is a wall between
+ * a phone user and their download.
  */
-const CropEditor = dynamic(
-  () => import('@/features/crop/components/CropEditor').then((m) => m.CropEditor),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="aspect-square w-full animate-pulse border-2 border-ink bg-green-700" />
-    ),
-  },
-)
 
 const STAGE_COPY: Record<PreparationStage, string> = {
   validating: 'Checking your photo…',
   decoding: 'Reading your photo…',
-  normalizing: 'Preparing your photo…',
+  normalizing: 'Framing your photo…',
   'preparing-assets': 'Almost there…',
 }
 
@@ -40,24 +32,15 @@ export function EditorShell() {
   const editor = useEditorController()
   const { state } = editor
 
-  /**
-   * react-easy-crop reads `initialCroppedAreaPercentages` only on mount, so
-   * changing state alone would leave its pan/zoom untouched and "Reset crop"
-   * would move the preview while the cropper stayed put. Bumping this nonce
-   * remounts it. Kept as local view state rather than in the reducer — it is a
-   * presentational concern, not editor state.
-   */
-  const [cropNonce, setCropNonce] = useState(0)
-
   const editing = isEditing(state) ? state : null
   const format = editing?.format ?? null
   const image = editing?.image ?? null
   const crop = editing?.crop ?? null
 
   /**
-   * Referential stability matters here: PreviewCanvas re-renders on model
-   * identity, so a fresh object literal every render would re-render the
-   * canvas on unrelated state changes such as the export flag toggling.
+   * Referential stability matters: PreviewCanvas re-renders on model identity,
+   * so a fresh object literal every render would repaint the canvas on
+   * unrelated state changes such as the export flag toggling.
    */
   const model = useMemo(
     () => (format && image && crop ? { format, image, crop } : null),
@@ -91,42 +74,24 @@ export function EditorShell() {
   const { width, height } = DESIGN[editing.format]
 
   return (
-    <div className="space-y-8">
-      <div className="grid gap-8 lg:grid-cols-2">
-        <section>
-          <h2 className="mb-3 text-xs font-bold tracking-[0.18em] text-yellow uppercase">
-            Adjust
-          </h2>
-          <CropEditor
-            // Remount on a new photo as well as on reset: react-easy-crop
-            // otherwise carries the previous pan and zoom onto the new image.
-            key={`${editing.image.previewUrl}:${cropNonce}`}
-            image={editing.image}
-            aspect={aspectOf(editing.format)}
-            crop={editing.crop}
-            onCropChange={editor.changeCrop}
-          />
-          <p className="mt-2 text-xs text-cream-dim/70">
-            Drag to reposition. Pinch or scroll to zoom.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="mb-3 text-xs font-bold tracking-[0.18em] text-yellow uppercase">
-            Preview · {width}×{height}
-          </h2>
-          <PreviewCanvas
-            model={model}
-            assets={editing.assets}
-            className="w-full border-2 border-ink"
-          />
-        </section>
+    <div className="mx-auto max-w-lg space-y-6">
+      <div>
+        <h2 className="mb-3 text-xs font-bold tracking-[0.18em] text-yellow uppercase">
+          Your graphic · {width}×{height}
+        </h2>
+        {/* The result is the whole screen. Nothing stands between arriving and
+            downloading. */}
+        <PreviewCanvas
+          model={model}
+          assets={editing.assets}
+          className="w-full border-2 border-ink"
+        />
       </div>
 
       {editing.quality === 'soft' ? (
         <p className="border-l-[3px] border-yellow bg-green-900 px-4 py-3 text-sm text-cream-dim">
-          This crop is quite tight — the result may look soft. Zoom out for a sharper
-          image.
+          This photo is on the small side, so your graphic may look slightly soft. A
+          larger photo will look sharper.
         </p>
       ) : null}
 
@@ -135,16 +100,6 @@ export function EditorShell() {
       <div className="flex flex-wrap gap-3">
         <Button onClick={editor.download} disabled={editing.isExporting}>
           {editing.isExporting ? 'Generating…' : 'Download PNG'}
-        </Button>
-        <Button
-          variant="secondary"
-          onClick={() => {
-            editor.resetCrop()
-            setCropNonce((n) => n + 1)
-          }}
-          disabled={editing.isExporting}
-        >
-          Reset crop
         </Button>
         <ReplacePhotoButton onFile={editor.selectFile} disabled={editing.isExporting} />
         <Button

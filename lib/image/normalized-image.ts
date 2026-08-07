@@ -8,12 +8,10 @@ import type { Releasable } from '@/lib/resource/resource-slot'
  * memory bounded on iOS (PRD R1, NFR-007) and what makes a second rotation bug
  * impossible (FR-011).
  *
- * It owns TWO browser resources and releases both together:
- *   - the downscaled canvas, used by the renderer
- *   - an object URL of that canvas, required because react-easy-crop takes a
- *     URL rather than a drawable
- *
- * One resource, one owner, one disposal (FR-015).
+ * It owns exactly one browser resource: the downscaled canvas. An object URL
+ * of the same pixels used to live here too, because react-easy-crop takes a
+ * URL rather than a drawable. Automatic framing (D-9) removed the cropper, and
+ * with it a full PNG encode of a 2400×2400 canvas on every single upload.
  */
 
 export interface ImageProvenance {
@@ -28,8 +26,6 @@ export interface ImageProvenance {
 export interface NormalizedImage extends Releasable {
   /** Drawable source for the renderer. */
   readonly source: CanvasImageSource
-  /** Object URL of the same pixels, for the cropper. */
-  readonly previewUrl: string
   readonly width: number
   readonly height: number
   readonly provenance: ImageProvenance
@@ -38,19 +34,18 @@ export interface NormalizedImage extends Releasable {
 
 export interface NormalizedImageInit {
   readonly source: CanvasImageSource
-  readonly previewUrl: string
   readonly width: number
   readonly height: number
   readonly provenance: ImageProvenance
   /**
-   * Injected so the type stays testable in Node, where neither canvases nor
-   * object URLs exist. `normalize.ts` supplies the real browser teardown.
+   * Injected so the type stays testable in Node, where canvases do not exist.
+   * `normalize.ts` supplies the real browser teardown.
    */
   readonly dispose: () => void
 }
 
 /**
- * Wraps already-created resources in an idempotent release.
+ * Wraps an already-created resource in an idempotent release.
  *
  * Idempotency is not defensive padding: the controller releases explicitly on
  * replacement and start-over, and the unmount safety net may release the same
@@ -61,7 +56,6 @@ export function createNormalizedImage(init: NormalizedImageInit): NormalizedImag
 
   return {
     source: init.source,
-    previewUrl: init.previewUrl,
     width: init.width,
     height: init.height,
     provenance: init.provenance,

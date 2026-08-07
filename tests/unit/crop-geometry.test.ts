@@ -3,7 +3,7 @@ import {
   clampCrop,
   cropToSourceRect,
   effectiveResolution,
-  smartDefaultCrop,
+  autoFrame,
   VERTICAL_SUBJECT_BIAS,
 } from '@/lib/image/crop-geometry'
 import { coverFit, containFit } from '@/lib/canvas/cover-fit'
@@ -11,14 +11,20 @@ import { coverFit, containFit } from '@/lib/canvas/cover-fit'
 const within = (value: number, expected: number, tolerance = 1e-9) =>
   Math.abs(value - expected) < tolerance
 
-describe('smartDefaultCrop', () => {
+describe('autoFrame — the automatic framing (D-9)', () => {
+  it('is deterministic — the same photo always frames identically', () => {
+    // With no manual adjustment, a user who re-uploads the same photo must get
+    // the same graphic (NFR-035).
+    expect(autoFrame(3024, 4032, 1)).toEqual(autoFrame(3024, 4032, 1))
+  })
+
   it('returns the whole image when aspects already match', () => {
-    const crop = smartDefaultCrop(1000, 1000, 1)
+    const crop = autoFrame(1000, 1000, 1)
     expect(crop).toEqual({ x: 0, y: 0, width: 1, height: 1 })
   })
 
   it('crops the sides of a landscape photo, staying centred horizontally', () => {
-    const crop = smartDefaultCrop(2000, 1000, 1)
+    const crop = autoFrame(2000, 1000, 1)
     expect(within(crop.width, 0.5)).toBe(true)
     expect(crop.height).toBe(1)
     expect(within(crop.x, 0.25)).toBe(true)
@@ -26,7 +32,7 @@ describe('smartDefaultCrop', () => {
   })
 
   it('biases upward on a portrait photo instead of centring', () => {
-    const crop = smartDefaultCrop(1000, 2000, 1)
+    const crop = autoFrame(1000, 2000, 1)
     expect(within(crop.height, 0.5)).toBe(true)
 
     // Centred would be y = 0.25. The bias must sit above that.
@@ -36,7 +42,7 @@ describe('smartDefaultCrop', () => {
 
   it('clamps the bias rather than leaving the image bounds', () => {
     // A very tall image: biased centre would push the top edge negative.
-    const crop = smartDefaultCrop(1000, 10000, 1)
+    const crop = autoFrame(1000, 10000, 1)
     expect(crop.y).toBeGreaterThanOrEqual(0)
     expect(crop.y + crop.height).toBeLessThanOrEqual(1)
   })
@@ -48,7 +54,7 @@ describe('smartDefaultCrop', () => {
     [200, 10000],
     [1, 1],
   ])('always produces an in-bounds crop for %i×%i', (w, h) => {
-    const crop = smartDefaultCrop(w, h, 1)
+    const crop = autoFrame(w, h, 1)
     expect(crop.x).toBeGreaterThanOrEqual(0)
     expect(crop.y).toBeGreaterThanOrEqual(0)
     expect(crop.x + crop.width).toBeLessThanOrEqual(1 + 1e-9)

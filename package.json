@@ -2,7 +2,7 @@
   "name": "goabyte-builder-studio",
   "version": "0.1.0",
   "private": true,
-  "description": "Builder Studio by GoaByte \u2014 create your Hacker House Goa 2026 identity.",
+  "description": "Builder Studio by GoaByte — create your Hacker House Goa 2026 identity.",
   "packageManager": "pnpm@11.20.0",
   "engines": {
     "node": ">=20.9.0"
@@ -27,7 +27,6 @@
     "next": "^15.5.4",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "react-easy-crop": "^6.2.3",
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {

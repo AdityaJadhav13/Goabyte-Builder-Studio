@@ -21,7 +21,6 @@ let disposals = 0
 const image = () =>
   createNormalizedImage({
     source: {} as CanvasImageSource,
-    previewUrl: 'blob:stub',
     width: 2400,
     height: 2400,
     provenance: {
@@ -73,11 +72,7 @@ describe('reducer purity', () => {
 
   it('is deterministic — same input, same output', () => {
     const state = editing()
-    const action = {
-      type: 'crop-changed' as const,
-      crop: { x: 0.1, y: 0.1, width: 0.5, height: 0.5 },
-      quality: 'ok' as const,
-    }
+    const action = { type: 'export-started' as const }
     expect(editorReducer(state, action)).toEqual(editorReducer(state, action))
   })
 })
@@ -127,24 +122,19 @@ describe('preparation flow', () => {
   })
 })
 
-describe('crop', () => {
-  it('clamps every crop entering state — FR-020', () => {
-    const next = editorReducer(editing(), {
-      type: 'crop-changed',
+describe('framing', () => {
+  it('clamps the automatic frame on the way into state — FR-020', () => {
+    // There is no crop action any more (D-9); image-ready is the single entry
+    // point for a frame, so it is the only place clamping has to hold.
+    const next = editorReducer(IDLE_STATE, {
+      type: 'image-ready',
+      image: image(),
+      assets: ASSETS,
+      format: 'pfp',
       crop: { x: 5, y: -3, width: 2, height: 2 },
       quality: 'ok',
     })
     expect(next).toMatchObject({ crop: { x: 0, y: 0, width: 1, height: 1 } })
-  })
-
-  it('ignores crop changes outside the editing phase', () => {
-    expect(
-      editorReducer(IDLE_STATE, {
-        type: 'crop-changed',
-        crop: { x: 0, y: 0, width: 1, height: 1 },
-        quality: 'ok',
-      }),
-    ).toBe(IDLE_STATE)
   })
 })
 
