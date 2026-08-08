@@ -43,6 +43,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           type="font/woff2"
           crossOrigin="anonymous"
         />
+        {/* The hero poster is the LCP candidate. Preloading the variant the
+            viewport will actually use avoids waiting for CSS and layout to
+            discover it — and avoids fetching both. */}
+        <link
+          rel="preload"
+          as="image"
+          href="/brand/hero-narrow.webp"
+          media="(max-width: 639px)"
+        />
+        <link
+          rel="preload"
+          as="image"
+          href="/brand/hero-wide.webp"
+          media="(min-width: 640px)"
+        />
       </head>
       <body>{children}</body>
     </html>

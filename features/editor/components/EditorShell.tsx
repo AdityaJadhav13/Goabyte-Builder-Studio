@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic'
 import { useEffect } from 'react'
 import { FormatShowcase } from '@/components/layout/FormatShowcase'
 import { Hero } from '@/components/layout/Hero'
+import { HeroPoster } from '@/components/layout/HeroPoster'
 import { InlineError } from '@/components/ui/InlineError'
 import { StatusMessage } from '@/components/ui/StatusMessage'
 import { UploadDropzone } from '@/features/upload/components/UploadDropzone'
@@ -48,7 +49,18 @@ export function EditorShell() {
 
   return (
     <div className="space-y-8">
-      <Hero compact={preparing || editingNow} />
+      {/* Idle is the only state that earns the poster. Placing it BESIDE the
+          copy rather than under it matters on desktop: stacked, it filled the
+          viewport and pushed the upload control — the actual thing we want
+          people to reach — below the fold. */}
+      {state.phase === 'idle' ? (
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-center">
+          <Hero compact={false} />
+          <HeroPoster />
+        </div>
+      ) : (
+        <Hero compact={preparing || editingNow} />
+      )}
 
       {preparing ? (
         <div className="flex min-h-[220px] flex-col justify-center gap-4 border-2 border-cream-dim/25 px-6 py-10">

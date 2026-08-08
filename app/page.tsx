@@ -29,9 +29,9 @@ export default function Home() {
       <footer className="mt-8 border-t border-cream-dim/15">
         <div className="mx-auto max-w-6xl px-5 py-8 sm:px-8">
           <p className="max-w-2xl text-xs leading-relaxed text-cream-dim/60">
-            An independent project by team GoaByte. Not an official Hacker House Goa
-            product — the visual language is original work inspired by the event, and no
-            organiser logos, wordmarks or artwork are used.
+            An independent project by team GoaByte, built for the Hacker House Goa 2026
+            open trial. Hacker House Goa artwork is used with permission. Your photo is
+            processed entirely in your browser and is never uploaded.
           </p>
         </div>
       </footer>

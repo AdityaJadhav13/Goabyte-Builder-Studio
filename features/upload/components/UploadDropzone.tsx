@@ -70,7 +70,7 @@ export function UploadDropzone({
       <span className="text-lg font-bold text-cream">
         {isDragActive ? 'Drop it' : label}
       </span>
-      <span className="max-w-xs text-sm leading-relaxed text-cream-dim">
+      <span className="max-w-sm text-sm leading-relaxed text-balance text-cream-dim">
         Framed automatically — no cropping needed. Post it with{' '}
         <span className="font-bold text-yellow">#FrameInGoa</span>.
       </span>

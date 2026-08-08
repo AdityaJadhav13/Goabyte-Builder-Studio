@@ -9,7 +9,9 @@
 
 ## 1. Brand position
 
-**Builder Studio is an independent project by team GoaByte. It is not an official Hacker House Goa product and must never imply that it is.** (D-1)
+**Builder Studio is an independent project by team GoaByte. It is not an official Hacker House Goa product and must never imply that it is.** (D-1, amended by D-1a)
+
+> **Update, 8 Aug 2026 — permission granted (D-1a).** Hacker House Goa branding and artwork are explicitly available for participant use. Organiser artwork may now be used; the constraints below on _impersonation_ still hold in full. Using their art does not make us official, and the footer states plainly what this is.
 
 That constraint shapes the whole system:
 
