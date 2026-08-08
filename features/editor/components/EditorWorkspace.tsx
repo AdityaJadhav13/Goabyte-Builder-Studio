@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic'
 import { useMemo } from 'react'
+import { Panel } from '@/components/layout/Panel'
 import { Button } from '@/components/ui/Button'
 import { FormatSelector } from '@/components/ui/FormatSelector'
 import { InlineError } from '@/components/ui/InlineError'
@@ -74,7 +75,10 @@ export function EditorWorkspace({
       : 'Hacker House Goa 2026 profile picture frame around your photo'
 
   return (
-    <div className="space-y-8">
+    /* Wrapped in a panel: every label, warning and helper line here would
+       otherwise sit on the illustration, where measured contrast bottoms out
+       at 1.84:1. */
+    <Panel className="space-y-8 p-5 sm:p-7">
       <FormatSelector
         value={format}
         onChange={editor.setFormat}
@@ -153,6 +157,6 @@ export function EditorWorkspace({
           ) : null}
         </div>
       </div>
-    </div>
+    </Panel>
   )
 }

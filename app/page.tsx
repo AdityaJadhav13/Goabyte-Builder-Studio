@@ -26,9 +26,11 @@ export default function Home() {
         <EditorShell />
       </main>
 
-      <footer className="mt-8 border-t border-cream-dim/15">
+      {/* Solid, not transparent: measured 4.07:1 sitting directly on the
+          artwork, which fails for text this size. */}
+      <footer className="mt-10 border-t-2 border-ink bg-green-900">
         <div className="mx-auto max-w-6xl px-5 py-8 sm:px-8">
-          <p className="max-w-2xl text-xs leading-relaxed text-cream-dim/60">
+          <p className="max-w-2xl text-xs leading-relaxed text-cream-dim/80">
             An independent project by team GoaByte, built for the Hacker House Goa 2026
             open trial. Hacker House Goa artwork is used with permission. Your photo is
             processed entirely in your browser and is never uploaded.

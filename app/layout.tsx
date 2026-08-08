@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next'
+import { AppBackground } from '@/components/layout/AppBackground'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -59,7 +60,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           media="(min-width: 640px)"
         />
       </head>
-      <body>{children}</body>
+      <body>
+        <AppBackground />
+        {children}
+      </body>
     </html>
   )
 }

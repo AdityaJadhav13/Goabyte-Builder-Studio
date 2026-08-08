@@ -4,7 +4,7 @@ import dynamic from 'next/dynamic'
 import { useEffect } from 'react'
 import { FormatShowcase } from '@/components/layout/FormatShowcase'
 import { Hero } from '@/components/layout/Hero'
-import { HeroPoster } from '@/components/layout/HeroPoster'
+import { Panel } from '@/components/layout/Panel'
 import { InlineError } from '@/components/ui/InlineError'
 import { StatusMessage } from '@/components/ui/StatusMessage'
 import { UploadDropzone } from '@/features/upload/components/UploadDropzone'
@@ -49,40 +49,40 @@ export function EditorShell() {
 
   return (
     <div className="space-y-8">
-      {/* Idle is the only state that earns the poster. Placing it BESIDE the
-          copy rather than under it matters on desktop: stacked, it filled the
-          viewport and pushed the upload control — the actual thing we want
-          people to reach — below the fold. */}
-      {state.phase === 'idle' ? (
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-center">
-          <Hero compact={false} />
-          <HeroPoster />
-        </div>
-      ) : (
-        <Hero compact={preparing || editingNow} />
-      )}
-
       {preparing ? (
-        <div className="flex min-h-[220px] flex-col justify-center gap-4 border-2 border-cream-dim/25 px-6 py-10">
+        <Panel className="mx-auto flex min-h-[220px] max-w-3xl flex-col justify-center gap-4 px-6 py-10">
           <StatusMessage>{STAGE_COPY[state.stage]}</StatusMessage>
           <p className="truncate text-xs text-cream-dim/60">{state.fileName}</p>
-        </div>
+        </Panel>
       ) : null}
 
       {state.phase === 'error' ? (
-        <div className="space-y-4">
+        <Panel className="mx-auto max-w-3xl space-y-5 p-6 sm:p-8">
           <InlineError error={state.error} />
           <UploadDropzone onFile={editor.selectFile} label="Try another photo" />
-        </div>
+        </Panel>
       ) : null}
 
       {editingNow ? <EditorWorkspace state={state} editor={editor} /> : null}
 
       {state.phase === 'idle' ? (
-        <div className="space-y-6">
-          <FormatShowcase />
+        /* ONE opaque card carrying the entire first step, floating on the
+           illustration. The hero lives inside it rather than on the artwork:
+           measured directly on the backdrop, the headline was 1.84:1 and the
+           tagline 2.97:1. On this panel everything is 11.85:1. The backdrop
+           supplies depth; the panel supplies contrast. */
+        <Panel className="mx-auto max-w-3xl space-y-7 p-6 sm:p-9">
+          <Hero compact={false} />
+
+          <div className="space-y-3 border-t-2 border-green-600 pt-6">
+            <h2 className="text-xs font-bold tracking-[0.18em] text-yellow uppercase">
+              What you&rsquo;ll get
+            </h2>
+            <FormatShowcase />
+          </div>
+
           <UploadDropzone onFile={editor.selectFile} />
-        </div>
+        </Panel>
       ) : null}
     </div>
   )
