@@ -29,6 +29,18 @@ function pngSize(bytes: Buffer): { width: number; height: number } {
 }
 
 async function upload(page: Page, file: string) {
+  // Two entry points now exist: the landing form (which gates on a Continue
+  // button) and the in-editor inputs. Drive whichever is on screen so every
+  // test exercises the same route a real user takes.
+  const landingContinue = page.locator('#continue-btn')
+  if (await landingContinue.count()) {
+    await page.setInputFiles(
+      '#upload-photo-btn ~ input[type="file"], input[type="file"]',
+      fixture(file),
+    )
+    await landingContinue.click()
+    return
+  }
   await page.setInputFiles('input[type="file"]', fixture(file))
 }
 
@@ -58,10 +70,12 @@ test('landing shows the product and an upload control above the fold', async ({
   await expect(
     page.getByRole('heading', { level: 1, name: 'Builder Studio' }),
   ).toBeVisible()
-  await expect(
-    page.getByText('Create your Hacker House Goa 2026 identity.'),
-  ).toBeVisible()
-  await expect(page.getByText('Choose a photo')).toBeInViewport()
+  // Our product name, not another entry's — this assertion exists to catch a
+  // regression that already happened once.
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Builder Studio')
+  // The landing now leads with the form card rather than a dropzone.
+  await expect(page.getByRole('button', { name: /upload photo/i })).toBeInViewport()
+  await expect(page.getByRole('button', { name: /take photo/i })).toBeInViewport()
 })
 
 test('full pipeline: portrait JPG → preview → 1080×1080 PNG download', async ({
@@ -277,9 +291,16 @@ test('no horizontal scroll at 320px (NFR-009)', async ({ page }) => {
 })
 
 test('the whole flow is reachable by keyboard (NFR-015)', async ({ page }) => {
-  await page.keyboard.press('Tab')
-  const focused = await page.evaluate(() => document.activeElement?.tagName)
-  expect(focused).toBe('INPUT')
+  // Walk the tab order and confirm the primary upload control is reachable —
+  // asserting a specific tag would break every time the landing is restyled.
+  let reachedUpload = false
+  for (let i = 0; i < 12 && !reachedUpload; i++) {
+    await page.keyboard.press('Tab')
+    reachedUpload = await page.evaluate(() =>
+      /upload photo/i.test(document.activeElement?.textContent ?? ''),
+    )
+  }
+  expect(reachedUpload, 'upload control not reachable by keyboard').toBe(true)
 
   await upload(page, 'portrait.jpg')
   await expectEditorReady(page)

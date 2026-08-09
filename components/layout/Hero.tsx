@@ -1,44 +1,64 @@
-import { cn } from '@/lib/cn'
-
 /**
- * The pitch.
+ * Left-column branding for the split-screen landing page.
  *
- * It collapses once a photo exists. Marketing copy has done its job the
- * instant someone commits a photo, and on a 390px phone leaving it expanded
- * pushed the graphic below the fold — the user scrolled past the argument to
- * reach the product.
+ * Large "HACKER HOUSE" display type with the गोवा Devanagari overlay (used
+ * with permission, D-1a), event header, product title, tagline, dates.
+ *
+ * The product is Builder Studio by GoaByte. Copy here describes what THIS
+ * product does — it is not borrowed from another entry, and it does not
+ * promise steps we do not have.
+ *
+ * When `compact` is true (a photo has been loaded), the branding collapses
+ * to a minimal header to give space to the editor workspace.
  */
 export function Hero({ compact }: { readonly compact: boolean }) {
-  return (
-    <div className="motion-reduce:transition-none">
-      <h1
-        className={cn(
-          'font-display text-cream transition-[font-size,line-height] duration-300 ease-out motion-reduce:transition-none',
-          compact ? 'text-3xl leading-tight' : 'text-5xl leading-[0.92] sm:text-7xl',
-        )}
-      >
-        Builder Studio
-      </h1>
+  if (compact) {
+    return (
+      <div className="brand-column">
+        <h1 className="brand-title" style={{ fontSize: '1.8rem' }}>
+          Builder Studio
+        </h1>
+        <p className="brand-tagline">Create your Hacker House Goa 2026 identity.</p>
+      </div>
+    )
+  }
 
-      {/* The tagline is the brand line and stays in both states. The practical
-          detail — automatic framing, accepted formats — lives in the dropzone,
-          where it is read at the moment it matters and fills space that was
-          otherwise empty. Saying it in both places was the redundancy. */}
-      <p
-        className={cn(
-          'text-cream-dim transition-[font-size] duration-300 ease-out motion-reduce:transition-none',
-          compact ? 'mt-1 text-sm' : 'mt-4 text-lg text-cream sm:text-xl',
-        )}
-      >
-        Create your Hacker House Goa 2026 identity.
+  return (
+    <div className="brand-column">
+      {/* Large "HACKER HOUSE" logo with गोवा overlay */}
+      <div className="brand-logo animate-fade-up">
+        <div className="brand-logo-text" aria-label="Hacker House Goa">
+          Hacker
+          <br />
+          House
+        </div>
+        <span className="brand-logo-goa" aria-hidden>
+          गोवा
+        </span>
+      </div>
+
+      {/* Event sub-header */}
+      <p className="brand-tagline animate-fade-up animate-delay-1">
+        Hacker House Goa 2026
       </p>
 
-      {compact ? null : (
-        <p className="mt-5 inline-flex items-center gap-2 border border-green-600 px-3 py-1.5 text-xs text-cream-dim">
-          <span aria-hidden>🔒</span>
-          Your photo never leaves your device.
-        </p>
-      )}
+      {/* Product title — ours, not another entry's. */}
+      <h1 className="brand-title animate-fade-up animate-delay-2">Builder Studio</h1>
+
+      {/*
+        Accurate to what the product actually does: there is no frame-picking
+        step (D-9), so promising one would be a broken promise the moment a
+        judge clicks Continue.
+      */}
+      <p className="brand-description animate-fade-up animate-delay-3">
+        Upload a photo and it&rsquo;s framed automatically &mdash; no cropping, no signup.
+        Download your graphic and post it with #FrameInGoa.
+      </p>
+
+      {/* Event dates */}
+      <p className="brand-dates animate-fade-up animate-delay-4">
+        Goa, India &middot; 28 &ndash; 31 Oct 2026
+      </p>
     </div>
   )
 }

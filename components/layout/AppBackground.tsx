@@ -28,13 +28,12 @@ export function AppBackground() {
         />
       </picture>
 
-      {/* Atmosphere only — this layer is NOT what makes text readable, so it
-          stays light enough to keep the illustration alive. */}
-      <div className="absolute inset-0 bg-green-900/45" />
+      {/* Atmosphere — very dark overlay matching the reference night scene.
+          The illustration is barely visible, providing depth only. */}
+      <div className="absolute inset-0 bg-green-900/75" />
 
-      {/* Vignette: pulls focus to the centre column and keeps the busy edges
-          of the illustration from competing with the panels. */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_25%,var(--color-green-900)_100%)] opacity-80" />
+      {/* Vignette: near-opaque edges, cinematic focus on center. */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_15%,var(--color-ink)_100%)] opacity-95" />
     </div>
   )
 }

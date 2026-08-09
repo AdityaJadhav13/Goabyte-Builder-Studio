@@ -1,7 +1,7 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { FormatShowcase } from '@/components/layout/FormatShowcase'
 import { Hero } from '@/components/layout/Hero'
 import { Panel } from '@/components/layout/Panel'
@@ -34,12 +34,50 @@ const STAGE_COPY: Record<PreparationStage, string> = {
   'preparing-assets': 'Almost there…',
 }
 
-export function EditorShell() {
+export function EditorShell({
+  initialFile,
+  initialFields,
+}: {
+  /** When provided (from the landing form), the editor auto-loads this file
+   *  on mount, skipping the idle dropzone. */
+  readonly initialFile?: File
+  /**
+   * Name and role captured on the landing form. Without this they were
+   * collected and then silently discarded — the user typed them, then landed
+   * in the editor with empty fields and had to type them again.
+   */
+  readonly initialFields?: { readonly name: string; readonly role: string }
+}) {
   const editor = useEditorController()
   const { state } = editor
 
+  // If a file was passed from the landing form, feed it into the editor
+  // pipeline on mount.
+  const initialFileConsumed = useRef(false)
+  useEffect(() => {
+    if (initialFile && !initialFileConsumed.current) {
+      initialFileConsumed.current = true
+      editor.selectFile(initialFile)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialFile])
+
   const preparing = state.phase === 'preparing'
   const editingNow = isEditing(state)
+
+  /**
+   * Carry the landing form's values into editor state once the image is ready.
+   * Applied on arrival in `editing` rather than alongside selectFile, because
+   * the pipeline resets fields when a new image is adopted.
+   */
+  const initialFieldsApplied = useRef(false)
+  useEffect(() => {
+    if (!editingNow || initialFieldsApplied.current) return
+    if (!initialFields?.name && !initialFields?.role) return
+    initialFieldsApplied.current = true
+    editor.setFields({ name: initialFields.name, role: initialFields.role })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingNow, initialFields])
 
   // Fetch the workspace chunk while the photo is still decoding, so it is
   // already resident by the time the editing phase renders.

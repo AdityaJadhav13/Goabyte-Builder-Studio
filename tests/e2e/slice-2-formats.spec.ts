@@ -17,6 +17,18 @@ function pngSize(bytes: Buffer): { width: number; height: number } {
 }
 
 async function upload(page: Page, file: string) {
+  // Two entry points now exist: the landing form (which gates on a Continue
+  // button) and the in-editor inputs. Drive whichever is on screen so every
+  // test exercises the same route a real user takes.
+  const landingContinue = page.locator('#continue-btn')
+  if (await landingContinue.count()) {
+    await page.setInputFiles(
+      '#upload-photo-btn ~ input[type="file"], input[type="file"]',
+      fixture(file),
+    )
+    await landingContinue.click()
+    return
+  }
   await page.setInputFiles('input[type="file"]', fixture(file))
 }
 

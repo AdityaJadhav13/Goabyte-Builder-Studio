@@ -3,20 +3,23 @@ import { AppBackground } from '@/components/layout/AppBackground'
 import './globals.css'
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://goabyte-builder-studio.vercel.app'),
   title: 'Builder Studio by GoaByte — Hacker House Goa 2026',
   description:
-    'Create your Hacker House Goa 2026 identity. Upload a photo, get a branded PFP or Builder ID card. No login. Your photo never leaves your device.',
+    'Create your Hacker House Goa 2026 identity. Upload a photo, get a framed PFP or Builder ID, and post it with #FrameInGoa. No signup — your photo never leaves your device.',
   applicationName: 'Builder Studio',
   authors: [{ name: 'GoaByte' }],
   openGraph: {
-    title: 'Builder Studio by GoaByte',
-    description: 'Create your Hacker House Goa 2026 identity.',
+    title: 'Builder Studio by GoaByte — Hacker House Goa 2026',
+    description:
+      'Create your Hacker House Goa 2026 identity. Upload a photo, get a framed PFP or Builder ID, and post it with #FrameInGoa. No signup — your photo never leaves your device.',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Builder Studio by GoaByte',
-    description: 'Create your Hacker House Goa 2026 identity.',
+    title: 'Builder Studio by GoaByte — Hacker House Goa 2026',
+    description:
+      'Create your Hacker House Goa 2026 identity. Upload a photo, get a framed PFP or Builder ID, and post it with #FrameInGoa. No signup — your photo never leaves your device.',
   },
 }
 

@@ -136,3 +136,405 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LANDING PAGE — split-screen hero layout (ID card generator replica)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.landing-wrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  position: relative;
+}
+
+.landing-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.5rem;
+}
+
+.landing-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 3rem;
+  max-width: 72rem;
+  width: 100%;
+  align-items: center;
+}
+
+@media (min-width: 768px) {
+  .landing-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 4rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .landing-grid {
+    gap: 5rem;
+  }
+}
+
+/* ── Left branding column ─────────────────────────────────────────────────── */
+
+.brand-column {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.brand-logo {
+  position: relative;
+  display: inline-block;
+  width: fit-content;
+  margin-bottom: 0.5rem;
+}
+
+.brand-logo-text {
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 8vw, 5.5rem);
+  line-height: 0.88;
+  color: var(--color-yellow);
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+}
+
+.brand-logo-goa {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-35%, -50%) rotate(-8deg);
+  font-size: clamp(1.6rem, 4.5vw, 3rem);
+  font-weight: 900;
+  color: var(--color-yellow);
+  text-shadow:
+    3px 3px 0 var(--color-pink),
+    -1px -1px 0 var(--color-pink),
+    1px -1px 0 var(--color-pink),
+    -1px 1px 0 var(--color-pink),
+    2px 0 0 var(--color-pink),
+    0 2px 0 var(--color-pink);
+  z-index: 2;
+  pointer-events: none;
+}
+
+.brand-tagline {
+  font-family: var(--font-sans);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: var(--color-cream-dim);
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.brand-title {
+  font-family: var(--font-display);
+  font-size: clamp(2.2rem, 5vw, 3.5rem);
+  line-height: 1;
+  color: var(--color-yellow);
+}
+
+.brand-description {
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: var(--color-cream-dim);
+  max-width: 28rem;
+  opacity: 0.85;
+}
+
+.brand-dates {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: var(--color-cream-dim);
+  text-transform: uppercase;
+  opacity: 0.7;
+  margin-top: 0.25rem;
+}
+
+/* ── Right form card ──────────────────────────────────────────────────────── */
+
+.form-card {
+  background-color: var(--color-green-800);
+  border: 2px solid var(--color-yellow);
+  border-radius: 1.25rem;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 520px;
+  width: 100%;
+  box-shadow:
+    0 0 40px rgba(249, 194, 46, 0.06),
+    0 25px 50px rgba(0, 0, 0, 0.3);
+}
+
+@media (min-width: 768px) {
+  .form-card {
+    padding: 2.5rem;
+    justify-self: end;
+  }
+}
+
+.form-section-label {
+  font-family: var(--font-sans);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: var(--color-cream);
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
+/* Photo button row */
+.photo-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.photo-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  height: 3rem;
+  border: 1.5px solid var(--color-green-600);
+  border-radius: 0.5rem;
+  background: var(--color-green-900);
+  color: var(--color-cream);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    background-color 0.2s;
+}
+
+.photo-btn:hover {
+  border-color: var(--color-yellow);
+  background: var(--color-green-700);
+}
+
+.photo-btn:focus-visible {
+  outline: 3px solid var(--color-yellow);
+  outline-offset: 2px;
+}
+
+.photo-btn--active {
+  border-color: var(--color-yellow);
+  background: var(--color-green-700);
+}
+
+/* Form inputs */
+.form-input {
+  width: 100%;
+  height: 3rem;
+  padding: 0 1rem;
+  border: 1.5px solid var(--color-green-600);
+  border-radius: 0.5rem;
+  background: var(--color-green-900);
+  color: var(--color-cream);
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  transition: border-color 0.2s;
+}
+
+.form-input::placeholder {
+  color: var(--color-cream-dim);
+  opacity: 0.45;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--color-yellow);
+  box-shadow: 0 0 0 1px var(--color-yellow);
+}
+
+/* Validation message */
+.form-validation {
+  font-size: 0.8rem;
+  color: var(--color-yellow);
+  opacity: 0.9;
+}
+
+/* Continue / Submit button */
+.form-submit {
+  width: 100%;
+  height: 3.25rem;
+  border: none;
+  border-radius: 0.75rem;
+  background: #f9c22e;
+  color: #05221a;
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition:
+    background-color 0.2s,
+    transform 0.1s;
+}
+
+.form-submit:hover {
+  background: #e5b225;
+}
+
+.form-submit:active {
+  transform: scale(0.98);
+}
+
+.form-submit:focus-visible {
+  outline: 3px solid var(--color-cream);
+  outline-offset: 2px;
+}
+
+.form-submit:disabled {
+  background: #c9a534;
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ── Footer ───────────────────────────────────────────────────────────────── */
+
+.landing-footer {
+  text-align: center;
+  padding: 1.5rem 1rem 2rem;
+}
+
+.landing-footer-link {
+  font-family: var(--font-sans);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: var(--color-yellow);
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+
+.landing-footer-link:hover {
+  opacity: 0.7;
+}
+
+/* ── Lightbulb theme toggle (decorative) ──────────────────────────────────── */
+
+.lightbulb-toggle {
+  position: fixed;
+  top: 0;
+  right: 2rem;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.3s;
+}
+
+.lightbulb-toggle:hover {
+  opacity: 1;
+}
+
+.lightbulb-wire {
+  width: 1.5px;
+  height: 2rem;
+  background: var(--color-cream-dim);
+  opacity: 0.5;
+}
+
+.lightbulb-icon {
+  font-size: 1.5rem;
+  filter: drop-shadow(0 0 6px rgba(249, 194, 46, 0.4));
+  animation: bulb-sway 4s ease-in-out infinite;
+}
+
+@keyframes bulb-sway {
+  0%,
+  100% {
+    transform: rotate(-2deg);
+  }
+  50% {
+    transform: rotate(2deg);
+  }
+}
+
+/* ── Photo preview thumbnail ──────────────────────────────────────────────── */
+
+.photo-preview-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.photo-preview {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.5rem;
+  object-fit: cover;
+  border: 1.5px solid var(--color-yellow);
+}
+
+.photo-preview-name {
+  font-size: 0.8rem;
+  color: var(--color-cream);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.photo-change-btn {
+  font-size: 0.75rem;
+  color: var(--color-yellow);
+  cursor: pointer;
+  background: none;
+  border: none;
+  font-weight: 600;
+  transition: opacity 0.2s;
+}
+
+.photo-change-btn:hover {
+  opacity: 0.7;
+}
+
+/* ── Entrance animation ───────────────────────────────────────────────────── */
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.6s ease-out both;
+}
+
+.animate-delay-1 {
+  animation-delay: 0.1s;
+}
+.animate-delay-2 {
+  animation-delay: 0.2s;
+}
+.animate-delay-3 {
+  animation-delay: 0.3s;
+}
+.animate-delay-4 {
+  animation-delay: 0.4s;
+}
+.animate-delay-5 {
+  animation-delay: 0.5s;
+}
