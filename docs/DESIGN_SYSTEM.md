@@ -188,19 +188,20 @@ Both templates are authored in **design units** — 1080 wide. The renderer appl
 
 ```
 ┌──────────────────────────────────────────┐ ← 20px ink keyline, full bleed
-│  ╭────────────────────────────────╮ ☀   │   sun mark: r=60 @ (960,120), yellow
+│  ▰ GOABYTE / GOA 26              ☀   │   poster ticker + sun mark
 │  │                                │      │
 │  │        PHOTO (full bleed)      │      │
 │  │                                │      │
 │  │     ┌ ─ ─ ─ ─ ─ ─ ─ ─ ┐        │      │   SUBJECT SAFE ZONE
-│  │     │  circle r=330    │       │      │   centre (540, 470)
-│  │     │  centre 540,470  │       │      │   nothing drawn inside
+│  │     │  circle r=325    │       │      │   centre (540, 460)
+│  │     │  centre 540,460  │       │      │   nothing drawn inside
 │  │     └ ─ ─ ─ ─ ─ ─ ─ ─ ┘        │      │
 │  │                                │      │
 │  ╰────────────────────────────────╯      │
-├──────────────────────────────────────────┤ ← lockup bar, green-800
-│  HACKER HOUSE GOA · 2026                 │   y 912→1080, h 168
-└──────────────────────────────────────────┘   text 40px Text-700, cream + yellow "2026"
+├──────────────────────────────────────────┤ ← lockup bar, green-900
+│  HACKER HOUSE    #FrameInGoa             │   y 824→1080, h 256
+│  GOA / 2026 · BUILD · CONNECT · WAVES    │   editorial display lockup
+└──────────────────────────────────────────┘
 ```
 
 | Property          | Value                                                                        |
@@ -208,10 +209,11 @@ Both templates are authored in **design units** — 1080 wide. The renderer appl
 | Canvas            | 1080 × 1080                                                                  |
 | Outer keyline     | 20px `ink`, inset 0                                                          |
 | Photo area        | full bleed, cover-fit                                                        |
-| Subject safe zone | circle, centre (540, 470), r 330 — **no graphic element may enter** (FR-023) |
-| Lockup bar        | y 912→1080, `green-800`, 3px `ink` top rule                                  |
-| Lockup text       | 40px Text-700, tracking 0.16em, `cream`; "2026" in `yellow`                  |
-| Sun mark          | circle r 60 @ (960, 120), `yellow`, 3px `ink` stroke                         |
+| Subject safe zone | circle, centre (540, 460), r 325 — **no graphic element may enter** (FR-023) |
+| Lockup bar        | y 824→1080, `green-900`, 12px `yellow` top rule                              |
+| Lockup text       | Cream micro-caps, 94px pink display lockup and yellow hashtag                |
+| Sun mark          | circle r 54 @ (928, 152), `yellow`, 5px `ink` stroke                         |
+| Poster details    | Yellow edition ticker, halftone dots, waves, sparkles and double keyline     |
 
 **Thumbnail behaviour (FR-024).** At 48×48 the lockup text is illegible — that is expected and fine. What must survive is the **silhouette**: dark band along the bottom, yellow dot top-right, ink keyline. Those three shapes make it identifiable as an HH Goa frame at avatar size. Design for the shape, not the text.
 
@@ -221,42 +223,41 @@ The safe zone is why the bar sits at the bottom rather than wrapping all four si
 
 ```
 ┌────────────────────────────────────────┐  margin 64
-│ ▓ HACKER HOUSE GOA 2026        ☀       │  eyebrow y=96, 24px Text-700
-│ ┌────────────────────────────────────┐ │
-│ │                                    │ │  PHOTO
-│ │           952 × 760                │ │  x 64, y 152, w 952, h 760
-│ │                                    │ │  cover-fit, 3px ink border
-│ └────────────────────────────────────┘ │
-│                                        │
-│  Aditya Jadhav                         │  NAME  y 1000, Display 88/56, ≤2 lines
-│  Backend · Architecture                │  ROLE  y 1080, Text-500 34/26, ≤2 lines
-│                                        │
-│  ▰ SHIPS ON DEADLINE ▰                 │  TITLE chip y 1150, pink fill + INK text
-│                                        │
+│ GOABYTE PRESENTS · HH GOA 2026   ☀    │  editorial masthead + halftone
+│ BUILDER                    GOA / 26    │
+│ ┌──────────────┐ ┌──────────────────┐ │
+│ │              │ │ MEET THE BUILDER │ │
+│ │   PORTRAIT   │ │ Aditya Jadhav    │ │  cream identity panel
+│ │   402 × 590  │ │ WHAT I BUILD     │ │
+│ │              │ │ Backend · Arch   │ │
+│ │ BUILDER/2026 │ │ ▰ TITLE CHIP ▰   │ │
+│ └──────────────┘ └──────────────────┘ │
 ├────────────────────────────────────────┤
-│  builderstudio.goabyte              ▓  │  footer y 1254→1350, green-900
+│ BUILD. CONNECT. MAKE WAVES.      🌴    │  tropical poster footer
+│ GOA, INDIA · 28–31 OCT   #FrameInGoa │
 └────────────────────────────────────────┘
 ```
 
-| Property                         | Value                                                               |
-| -------------------------------- | ------------------------------------------------------------------- |
-| Canvas                           | 1080 × 1350                                                         |
-| Page margin                      | 64                                                                  |
-| **Central safe region (FR-027)** | inset 80 on all sides — photo, name, and role stay inside           |
-| Photo                            | x 64, y 152, w 952, h 760 (≈5:4), cover-fit, 3px `ink` border       |
-| Name                             | baseline y 1000, Display 400 @ 88 → floor 56, max 2 lines, `cream`  |
-| Role                             | baseline y 1080, Text 500 @ 34 → floor 26, max 2 lines, `cream-dim` |
-| Title chip                       | y 1150, `pink` fill, 2px `ink` border, **`ink` text** @ 26 Text-700 |
-| Footer                           | y 1254→1350, `green-900`, 3px `ink` top rule                        |
-| Surface                          | `green-800`                                                         |
+| Property                         | Value                                                              |
+| -------------------------------- | ------------------------------------------------------------------ |
+| Canvas                           | 1080 × 1350                                                        |
+| Page margin                      | 64                                                                 |
+| **Central safe region (FR-027)** | inset 80 on all sides — photo, name, and role stay inside          |
+| Photo                            | x 64, y 360, w 402, h 590 (portrait), yellow frame + pink offset   |
+| Identity panel                   | x 500, y 360, w 516, h 590, `cream` with 5px `ink` border          |
+| Name                             | top y 446, Display 400 @ 60 → floor 42, max 2 lines, `ink`         |
+| Role                             | top y 660, Text 500 @ 36 → floor 26, max 3 lines, `green-900`      |
+| Title chip                       | y 804, `pink` fill, 4px `ink` border, **`ink` text** @ 25 Text-700 |
+| Footer                           | y 994→1350, three-colour slogan, code-drawn palm and wave lines    |
+| Surface                          | `green-900` with pink rail, yellow double frame and halftone       |
 
-**Crop aspect for the card photo is 5:4** (952:760), which is why `crops` is keyed per format — switching PFP ↔ card cannot reuse a 1:1 crop (FR-019, FR-058).
+**Crop aspect for the card photo is portrait** (402:590), which is why `crops` is keyed per format — switching PFP ↔ card cannot reuse a 1:1 crop (FR-019, FR-058).
 
 **The title chip is `ink` on `pink`, never `cream` on `pink`.** §3.3. This is the single pairing most likely to be got wrong by someone working from a screenshot.
 
 **On FR-027's safe region:** the 80px inset is justified by durable concerns — UI overlays, repost framing, embeds, thumbnail crops, and future platform changes — not by any one platform's current behaviour (D-4). It costs almost nothing and survives changes we cannot predict.
 
-**When the builder title is empty** (FR-033): the chip is omitted and the footer rule moves up by 96 design units. The layout reflows; it does not leave a gap. This case must be in the recording-context tests.
+**When the builder title is empty** (FR-033): the chip is omitted and the poster footer moves up. Missing role and title blocks reflow independently rather than leaving holes; both cases remain covered by recording-context tests.
 
 ## 7. Components
 

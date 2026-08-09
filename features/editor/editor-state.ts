@@ -28,8 +28,8 @@ export interface EditingState {
   readonly assets: RenderAssets
   readonly format: OutputFormat
   /**
-   * Computed automatically per format and never user-edited (D-9). Keyed by
-   * format because the PFP frames a square and the card frames a 5:4 well —
+   * Starts from the automatic subject-biased frame and can be adjusted by the
+   * user. Keyed by format because the PFP and card use different photo wells —
    * switching formats must not reuse the other's frame (FR-019).
    */
   readonly crops: Readonly<Record<OutputFormat, CropRect>>
@@ -74,6 +74,11 @@ export type EditorAction =
       readonly fields: BuilderFields
     }
   | { readonly type: 'format-changed'; readonly format: OutputFormat }
+  | {
+      readonly type: 'crop-changed'
+      readonly format: OutputFormat
+      readonly crop: CropRect
+    }
   | { readonly type: 'fields-changed'; readonly fields: Partial<BuilderFields> }
   | { readonly type: 'export-started' }
   | { readonly type: 'export-settled'; readonly exported: ExportedGraphic }

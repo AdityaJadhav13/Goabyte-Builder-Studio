@@ -8,9 +8,9 @@ import { IDLE_STATE, type EditorAction, type EditorState } from './editor-state'
  * `URL.revokeObjectURL()`, or any other side effect. Resource disposal is the
  * job of `use-editor-controller.ts`, which owns a ResourceSlot.
  *
- * There is no crop action: framing is computed automatically and enters state
- * with image-ready (D-9). clampCrop still guards that entry point, so FR-020's
- * "out of bounds is impossible by construction" continues to hold.
+ * Every crop entering state passes through clampCrop, including live user
+ * adjustments. FR-020's "out of bounds is impossible by construction"
+ * therefore holds for both preview and export.
  */
 export function editorReducer(state: EditorState, action: EditorAction): EditorState {
   switch (action.type) {
@@ -54,6 +54,15 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
       // Keeping it would let the share panel offer a PFP while the preview
       // shows a card. The controller revokes its object URL.
       return { ...state, format: action.format, exported: null, exportError: null }
+
+    case 'crop-changed':
+      if (state.phase !== 'editing') return state
+      return {
+        ...state,
+        crops: { ...state.crops, [action.format]: clampCrop(action.crop) },
+        exported: null,
+        exportError: null,
+      }
 
     case 'fields-changed': {
       if (state.phase !== 'editing') return state

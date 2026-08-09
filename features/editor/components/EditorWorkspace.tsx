@@ -1,15 +1,23 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Panel } from '@/components/layout/Panel'
 import { Button } from '@/components/ui/Button'
 import { FormatSelector } from '@/components/ui/FormatSelector'
 import { InlineError } from '@/components/ui/InlineError'
 import { ReplacePhotoButton } from '@/features/upload/components/ReplacePhotoButton'
-import { DESIGN, PREVIEW_MAX_WIDTH_PX } from '@/features/render/types'
+import { aspectOf, DESIGN, PREVIEW_MAX_WIDTH_PX } from '@/features/render/types'
+import type { OutputFormat } from '@/features/render/types'
+import {
+  DEFAULT_FRAME_CONTROLS,
+  effectiveResolution,
+  frameFromControls,
+  type FrameControls,
+} from '@/lib/image/crop-geometry'
 import { canExport, type EditingState } from '../editor-state'
 import type { EditorController } from '../use-editor-controller'
+import { PhotoPositionControls } from './PhotoPositionControls'
 import { PreviewCanvas } from './PreviewCanvas'
 
 /**
@@ -41,12 +49,18 @@ const SharePanel = dynamic(
 export function EditorWorkspace({
   state,
   editor,
+  onReturnHome,
 }: {
   readonly state: EditingState
   readonly editor: EditorController
+  readonly onReturnHome?: () => void
 }) {
   const { format, image, fields } = state
   const crop = state.crops[format]
+  const [adjustments, setAdjustments] = useState<Record<OutputFormat, FrameControls>>({
+    pfp: DEFAULT_FRAME_CONTROLS,
+    'builder-card': DEFAULT_FRAME_CONTROLS,
+  })
 
   /**
    * Referential stability matters: PreviewCanvas repaints on model identity,
@@ -66,6 +80,15 @@ export function EditorWorkspace({
   const { width, height } = DESIGN[format]
   const isCard = format === 'builder-card'
   const ready = canExport(state)
+  const quality = effectiveResolution(crop, image, DESIGN[format].width)
+
+  const setPhotoAdjustment = (next: FrameControls) => {
+    setAdjustments((current) => ({ ...current, [format]: next }))
+    editor.setCrop(
+      format,
+      frameFromControls(image.width, image.height, aspectOf(format), next),
+    )
+  }
 
   // A screen-reader user cannot see the canvas, so the label has to carry what
   // is actually on it — not just its dimensions (FR-041).
@@ -78,84 +101,165 @@ export function EditorWorkspace({
     /* Wrapped in a panel: every label, warning and helper line here would
        otherwise sit on the illustration, where measured contrast bottoms out
        at 1.84:1. */
-    <Panel className="space-y-8 p-5 sm:p-7">
-      <FormatSelector
-        value={format}
-        onChange={editor.setFormat}
-        disabled={state.isExporting}
-      />
+    <Panel className="editor-studio">
+      <div className="editor-studio-orb editor-studio-orb--one" aria-hidden="true" />
+      <div className="editor-studio-orb editor-studio-orb--two" aria-hidden="true" />
+
+      <div className="editor-format-deck">
+        <div className="editor-format-intro">
+          <p className="editor-section-kicker">Creative control room</p>
+          <h1>Make it unmistakably yours.</h1>
+          <p>Frame it, personalise it and export a post-ready GoaByte graphic.</p>
+        </div>
+        <FormatSelector
+          value={format}
+          onChange={editor.setFormat}
+          disabled={state.isExporting}
+        />
+      </div>
 
       {/* Source order is deliberate. On MOBILE the preview comes first: the
           result is the product, and burying it under a form, three buttons and
           a share panel means a phone user scrolls past everything to see what
           they made. On desktop there is room for both, so the controls move
           left and the preview right. */}
-      <div className="flex flex-col gap-8 lg:grid lg:grid-cols-[minmax(0,400px)_minmax(0,1fr)] lg:items-start">
-        <div className="order-2 space-y-6 lg:order-1">
+      <div className="editor-workspace-grid">
+        <aside className="editor-control-rail" data-format={format}>
+          <div className="editor-rail-heading">
+            <span>01</span>
+            <div>
+              <p className="editor-section-kicker">Tune the composition</p>
+              <h2>Photo controls</h2>
+            </div>
+          </div>
+
+          <PhotoPositionControls
+            value={adjustments[format]}
+            onChange={setPhotoAdjustment}
+            disabled={state.isExporting}
+          />
+
           {isCard ? (
-            <BuilderFieldsForm
-              fields={fields}
-              onChange={editor.setFields}
-              disabled={state.isExporting}
-            />
+            <section className="editor-details-card">
+              <div className="editor-details-heading">
+                <div>
+                  <p className="editor-section-kicker">Identity layer</p>
+                  <h3>Builder details</h3>
+                </div>
+                <span>Included in ID</span>
+              </div>
+              <BuilderFieldsForm
+                fields={fields}
+                onChange={editor.setFields}
+                disabled={state.isExporting}
+              />
+            </section>
           ) : (
-            <p className="border-l-2 border-green-600 py-1 pl-4 text-sm leading-relaxed text-cream-dim">
-              Framed automatically — no cropping needed. Switch to Builder ID to add your
-              name and what you build.
-            </p>
+            <div className="editor-format-tip">
+              <span aria-hidden="true">✦</span>
+              <p>
+                Profile mode keeps the energy focused on your photo. Switch to Builder ID
+                to add your name, role and scannable studio QR.
+              </p>
+            </div>
           )}
 
           {state.exportError ? <InlineError error={state.exportError} /> : null}
 
-          <div className="flex flex-wrap gap-3">
-            <Button onClick={editor.download} disabled={state.isExporting || !ready}>
-              {state.isExporting ? 'Generating…' : 'Download PNG'}
-            </Button>
-            <ReplacePhotoButton onFile={editor.selectFile} disabled={state.isExporting} />
-            <Button
-              variant="secondary"
-              onClick={editor.startOver}
-              disabled={state.isExporting}
-            >
-              Start over
-            </Button>
+          <div className="editor-action-card">
+            <p className="editor-section-kicker">Ready when you are</p>
+            {/*
+              Sits ABOVE the button it explains, inside the same card. As a
+              trailing sibling it was clipped by the rail's height constraint on
+              desktop, leaving Download disabled with the reason cut off
+              mid-sentence — an unexplained disabled action.
+            */}
+            {!ready ? (
+              <p className="editor-required-message text-sm text-cream-dim/70">
+                Add your name and what you build to generate your Builder ID.
+              </p>
+            ) : null}
+            <div className="editor-action-row">
+              <Button
+                className="editor-download-button"
+                onClick={editor.download}
+                disabled={state.isExporting || !ready}
+              >
+                {state.isExporting ? 'Generating…' : 'Download PNG'}
+                <span aria-hidden="true">↓</span>
+              </Button>
+              <ReplacePhotoButton
+                onFile={editor.selectFile}
+                disabled={state.isExporting}
+              />
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  editor.startOver()
+                  onReturnHome?.()
+                }}
+                disabled={state.isExporting}
+              >
+                Start over
+              </Button>
+            </div>
           </div>
 
-          {!ready ? (
-            <p className="text-sm text-cream-dim/70">
-              Add your name and what you build to generate your Builder ID.
-            </p>
-          ) : null}
-
           {state.exported ? <SharePanel exported={state.exported} /> : null}
-        </div>
+        </aside>
 
-        <div className="order-1 space-y-4 lg:order-2 lg:sticky lg:top-6">
+        <section className="editor-preview-stage">
           {/* The primary label on the screen: the result outranks the
               controls, so it gets cream and size rather than the same yellow
               micro-caps everything else uses. */}
-          <h2 className="flex items-baseline gap-2 text-base font-bold text-cream">
-            Your graphic
-            <span className="font-mono text-xs font-normal tracking-wide text-cream-dim/60">
-              {width}×{height}
-            </span>
-          </h2>
-          <div style={{ maxWidth: PREVIEW_MAX_WIDTH_PX[format] }} className="lg:mx-auto">
-            <PreviewCanvas
-              model={model}
-              assets={state.assets}
-              description={description}
-              className="w-full border-2 border-ink shadow-ink"
-            />
+          <div className="editor-preview-heading">
+            <div>
+              <p className="editor-section-kicker">Live canvas</p>
+              <h2>Your graphic</h2>
+            </div>
+            <div className="editor-preview-badges">
+              <span>
+                {width}×{height}
+              </span>
+              <span>PNG</span>
+            </div>
           </div>
 
-          {state.quality === 'soft' ? (
-            <p className="border-l-[3px] border-yellow bg-green-900 px-4 py-3 text-sm text-cream-dim">
+          <div className="editor-preview-viewport">
+            <span className="editor-preview-coordinate editor-preview-coordinate--top">
+              GOA / 26
+            </span>
+            <span className="editor-preview-coordinate editor-preview-coordinate--side">
+              LIVE OUTPUT
+            </span>
+            <div
+              style={{ maxWidth: PREVIEW_MAX_WIDTH_PX[format] }}
+              className="editor-preview-canvas-wrap"
+              data-format={format}
+            >
+              <PreviewCanvas
+                model={model}
+                assets={state.assets}
+                description={description}
+                className="editor-preview-canvas"
+              />
+            </div>
+          </div>
+
+          <div className="editor-preview-meta">
+            <span>
+              <i aria-hidden="true" /> Preview matches download
+            </span>
+            <span>Processed on this device</span>
+          </div>
+
+          {state.quality === 'soft' || quality === 'soft' ? (
+            <p className="editor-quality-warning">
               This photo is on the small side, so your graphic may look slightly soft. A
-              larger photo will look sharper.
+              larger photo or less zoom will look sharper.
             </p>
           ) : null}
-        </div>
+        </section>
       </div>
     </Panel>
   )

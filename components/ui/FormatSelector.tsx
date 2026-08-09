@@ -1,7 +1,6 @@
 'use client'
 
 import { useId } from 'react'
-import { cn } from '@/lib/cn'
 import {
   DESIGN,
   FORMAT_LABEL,
@@ -30,28 +29,18 @@ export function FormatSelector({
   const groupName = useId()
 
   return (
-    <fieldset disabled={disabled} className="relative min-w-0 disabled:opacity-40">
-      <legend className="mb-3 text-xs font-bold tracking-[0.18em] text-yellow uppercase">
-        Choose your format
-      </legend>
-      <p className="absolute top-0 right-0 text-[10px] font-bold tracking-[0.12em] text-cream-dim/55 uppercase">
-        Switch anytime
-      </p>
-      <div
-        role="radiogroup"
-        className="grid w-full grid-cols-2 border-2 border-ink bg-cream p-1 shadow-ink-sm sm:max-w-[430px]"
-      >
+    <fieldset disabled={disabled} className="format-selector">
+      <legend>Choose your format</legend>
+      <p className="format-selector-helper">Switch anytime</p>
+      <div role="radiogroup" className="format-selector-track">
         {OUTPUT_FORMATS.map((format) => {
           const checked = value === format
           const { width, height } = DESIGN[format]
           return (
             <label
               key={format}
-              className={cn(
-                'flex min-w-0 cursor-pointer flex-col gap-0.5 px-3 py-2.5 text-sm font-bold transition-colors sm:px-4',
-                'has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-yellow',
-                checked ? 'bg-yellow text-ink' : 'text-ink/60 hover:text-ink',
-              )}
+              className="format-selector-option"
+              data-selected={checked ? 'true' : 'false'}
             >
               <input
                 type="radio"
@@ -62,13 +51,11 @@ export function FormatSelector({
                 aria-label={FORMAT_LABEL[format]}
                 className="sr-only"
               />
-              <span>{FORMAT_LABEL[format]}</span>
-              <span
-                className={cn(
-                  'font-mono text-[10px] font-medium tracking-wide',
-                  checked ? 'text-ink/65' : 'text-ink/45',
-                )}
-              >
+              <span className="format-selector-label">
+                <i aria-hidden="true" />
+                {FORMAT_LABEL[format]}
+              </span>
+              <span className="format-selector-size">
                 {width}×{height} PNG
               </span>
             </label>

@@ -129,8 +129,6 @@ describe('preparation flow', () => {
 
 describe('framing', () => {
   it('clamps the automatic frame on the way into state — FR-020', () => {
-    // There is no crop action any more (D-9); image-ready is the single entry
-    // point for a frame, so it is the only place clamping has to hold.
     const next = editorReducer(IDLE_STATE, {
       type: 'image-ready',
       image: image(),
@@ -148,6 +146,26 @@ describe('framing', () => {
         pfp: { x: 0, y: 0, width: 1, height: 1 },
         'builder-card': { x: 0, y: 0, width: 1, height: 1 },
       },
+    })
+  })
+
+  it('clamps a live adjustment and invalidates the previous export', () => {
+    const state = editing({
+      exported: {
+        file: new File([], 'old.png'),
+        objectUrl: 'blob:old',
+        format: 'pfp',
+      },
+    })
+    const next = editorReducer(state, {
+      type: 'crop-changed',
+      format: 'pfp',
+      crop: { x: -4, y: 9, width: 0.5, height: 0.5 },
+    })
+
+    expect(next).toMatchObject({
+      crops: { pfp: { x: 0, y: 0.5, width: 0.5, height: 0.5 } },
+      exported: null,
     })
   })
 })

@@ -36,12 +36,12 @@ export const DESIGN: Record<OutputFormat, OutputSize> = {
 
 /**
  * Aspect of the PHOTO AREA, which is not the aspect of the output. The PFP is
- * a full-bleed square; the card's photo well is 5:4 inside a 4:5 canvas.
+ * a full-bleed square; the card uses a portrait photo well inside a 4:5 poster.
  * Automatic framing needs the photo aspect, never the canvas aspect.
  */
 export const PHOTO_ASPECT: Record<OutputFormat, number> = {
   pfp: 1,
-  'builder-card': 952 / 760,
+  'builder-card': 402 / 590,
 }
 
 export const aspectOf = (format: OutputFormat): number => PHOTO_ASPECT[format]

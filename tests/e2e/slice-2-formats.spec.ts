@@ -22,10 +22,9 @@ async function upload(page: Page, file: string) {
   // test exercises the same route a real user takes.
   const landingContinue = page.locator('#continue-btn')
   if (await landingContinue.count()) {
-    await page.setInputFiles(
-      '#upload-photo-btn ~ input[type="file"], input[type="file"]',
-      fixture(file),
-    )
+    // The camera fallback has its own `capture` input. Browse tests must drive
+    // the canonical non-capture input rather than matching both controls.
+    await page.setInputFiles('input[type="file"]:not([capture])', fixture(file))
     await landingContinue.click()
     return
   }

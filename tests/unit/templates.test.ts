@@ -136,6 +136,14 @@ describe('Builder ID card', () => {
     )
   })
 
+  it('paints the scannable QR matrix into the Builder ID', () => {
+    const record = render('builder-card', 1, FIELDS)
+    expect(record.callsOf('fillRect').length).toBeGreaterThan(150)
+    expect(CARD_LAYOUT.qr.x + CARD_LAYOUT.qr.size).toBeLessThanOrEqual(
+      CARD_LAYOUT.safeRegion.right,
+    )
+  })
+
   it('keeps identity content inside the central safe region — FR-027', () => {
     const { safeRegion } = CARD_LAYOUT
     expect(CARD_LAYOUT.photo.x).toBeGreaterThanOrEqual(

@@ -3,6 +3,8 @@ import {
   clampCrop,
   cropToSourceRect,
   effectiveResolution,
+  frameFromControls,
+  minimumZoomForPosition,
   autoFrame,
   VERTICAL_SUBJECT_BIAS,
 } from '@/lib/image/crop-geometry'
@@ -82,6 +84,80 @@ describe('clampCrop — FR-020, out of bounds is impossible by construction', ()
   it('degrades an oversized crop to a valid one rather than an inverted one', () => {
     const clamped = clampCrop({ x: 0, y: 0, width: 5, height: 5 })
     expect(clamped).toEqual({ x: 0, y: 0, width: 1, height: 1 })
+  })
+})
+
+describe('frameFromControls — manual photo positioning', () => {
+  it('matches the automatic frame at the default controls', () => {
+    expect(
+      frameFromControls(3024, 4032, 1, { zoom: 1, positionX: 0, positionY: 0 }),
+    ).toEqual(autoFrame(3024, 4032, 1))
+  })
+
+  it('zooms around the automatic subject centre', () => {
+    const automatic = autoFrame(3024, 4032, 1)
+    const zoomed = frameFromControls(3024, 4032, 1, {
+      zoom: 2,
+      positionX: 0,
+      positionY: 0,
+    })
+
+    expect(zoomed.width).toBeCloseTo(automatic.width / 2)
+    expect(zoomed.height).toBeCloseTo(automatic.height / 2)
+    expect(zoomed.x + zoomed.width / 2).toBeCloseTo(automatic.x + automatic.width / 2)
+    expect(zoomed.y + zoomed.height / 2).toBeCloseTo(automatic.y + automatic.height / 2)
+  })
+
+  it('moves all the way to the requested image edge', () => {
+    const leftTop = frameFromControls(4000, 3000, 1, {
+      zoom: 1.5,
+      positionX: -100,
+      positionY: -100,
+    })
+    const rightBottom = frameFromControls(4000, 3000, 1, {
+      zoom: 1.5,
+      positionX: 100,
+      positionY: 100,
+    })
+
+    expect(leftTop.x).toBe(0)
+    expect(leftTop.y).toBe(0)
+    expect(rightBottom.x + rightBottom.width).toBeCloseTo(1)
+    expect(rightBottom.y + rightBottom.height).toBeCloseTo(1)
+  })
+
+  it('creates enough safe zoom for either axis to move from 1×', () => {
+    const automatic = autoFrame(4000, 3000, 1)
+    const movedUp = frameFromControls(4000, 3000, 1, {
+      zoom: 1,
+      positionX: 0,
+      positionY: -80,
+    })
+    const movedLeft = frameFromControls(3000, 4000, 1, {
+      zoom: 1,
+      positionX: -80,
+      positionY: 0,
+    })
+
+    expect(minimumZoomForPosition(0, -80)).toBeGreaterThan(1)
+    expect(movedUp.height).toBeLessThan(automatic.height)
+    expect(movedUp.y + movedUp.height / 2).toBeLessThan(0.5)
+    expect(movedLeft.width).toBeLessThan(1)
+    expect(movedLeft.x + movedLeft.width / 2).toBeLessThan(0.5)
+  })
+
+  it('clamps hostile control values and always stays in bounds', () => {
+    const crop = frameFromControls(4000, 3000, 1, {
+      zoom: 99,
+      positionX: -999,
+      positionY: 999,
+    })
+    expect(crop.width).toBeGreaterThan(0)
+    expect(crop.height).toBeGreaterThan(0)
+    expect(crop.x).toBeGreaterThanOrEqual(0)
+    expect(crop.y).toBeGreaterThanOrEqual(0)
+    expect(crop.x + crop.width).toBeLessThanOrEqual(1)
+    expect(crop.y + crop.height).toBeLessThanOrEqual(1)
   })
 })
 

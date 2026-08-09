@@ -1,34 +1,22 @@
 import { PALETTE } from '@/lib/brand/palette'
 import {
+  drawChip,
   drawScrim,
   drawSunMark,
   fillRect,
   strokeInset,
 } from '@/lib/canvas/draw-primitives'
+import { drawHalftone, drawSparkle, drawWaveLines } from '@/lib/canvas/poster-motifs'
 import { cropToSourceRect } from '@/lib/image/crop-geometry'
 import type { RenderModel, RenderTarget } from '../types'
 import { PFP_LAYOUT as L } from './pfp.layout'
 
-/**
- * Production PFP frame.
- *
- * Drawing only — every coordinate and type spec comes from `pfp.layout.ts`, so
- * this file contains no magic numbers.
- *
- * Deterministic and synchronous, with no external side effects: it mutates the
- * supplied CanvasRenderingContext2D and nothing else. No network, no asset
- * loading, no dynamic import, no application state, no clock, no randomness,
- * no storage, no async. Enforced by ESLint over `*.draw.ts`.
- */
-
-/** Poster registration marks. Two strokes per corner, ink on photo. */
 function drawCornerBrackets(ctx: CanvasRenderingContext2D): void {
-  const { inset, length, width: w } = L.corners
+  const { inset, length, width: lineWidth } = L.corners
   const right = L.canvas.width - inset
-  const bottom = L.canvas.height - inset
 
   ctx.strokeStyle = PALETTE.cream
-  ctx.lineWidth = w
+  ctx.lineWidth = lineWidth
   ctx.lineCap = 'square'
 
   const bracket = (x: number, y: number, dx: number, dy: number) => {
@@ -41,18 +29,17 @@ function drawCornerBrackets(ctx: CanvasRenderingContext2D): void {
 
   bracket(inset, inset, 1, 1)
   bracket(right, inset, -1, 1)
-  // Bottom corners are omitted: the lockup bar occupies that edge, and
-  // brackets there would collide with the type.
 }
 
+/**
+ * The square export treats the photo like a music-poster cover: bold frame,
+ * clipped ticker and tropical marks, while leaving the face-safe centre clear.
+ */
 export function drawPfp(target: RenderTarget, model: RenderModel): void {
   const { ctx } = target
 
-  // Opaque base — guarantees the export has no transparent regions (NFR-034)
-  // even if the photo somehow fails to cover the canvas.
   fillRect(ctx, { x: 0, y: 0, ...L.canvas }, PALETTE['green-900'])
 
-  // ── Photo, full bleed, from the automatic frame ──────────────────────────
   const src = cropToSourceRect(model.crop, model.image)
   ctx.drawImage(
     model.image.source,
@@ -67,11 +54,29 @@ export function drawPfp(target: RenderTarget, model: RenderModel): void {
   )
 
   drawCornerBrackets(ctx)
+  drawHalftone(
+    ctx,
+    L.halftone.x,
+    L.halftone.y,
+    L.halftone.columns,
+    L.halftone.rows,
+    L.halftone.gap,
+    L.halftone.radius,
+    PALETTE.yellow,
+  )
 
-  // ── Scrim, so the lockup is legible over any photo ───────────────────────
+  drawChip(ctx, L.ticker, 3, PALETTE.yellow, PALETTE.ink, L.ticker.borderWidth)
+  ctx.textBaseline = 'alphabetic'
+  ctx.textAlign = 'left'
+  ctx.fillStyle = PALETTE.ink
+  ctx.font = `${L.tickerTop.fontWeight} ${L.tickerTop.fontSize}px ${L.tickerTop.fontFamily}`
+  ctx.letterSpacing = `${L.tickerTop.letterSpacing}px`
+  ctx.fillText(L.tickerTop.text, L.tickerTop.x, L.tickerTop.baselineY)
+  ctx.font = `${L.tickerMain.fontWeight} ${L.tickerMain.fontSize}px ${L.tickerMain.fontFamily}`
+  ctx.letterSpacing = `${L.tickerMain.letterSpacing}px`
+  ctx.fillText(L.tickerMain.text, L.tickerMain.x, L.tickerMain.baselineY)
+
   drawScrim(ctx, L.scrim, 'rgba(5, 34, 26, 0)', PALETTE['green-900'])
-
-  // ── Lockup bar ───────────────────────────────────────────────────────────
   fillRect(ctx, L.bar, PALETTE['green-900'])
   fillRect(
     ctx,
@@ -79,29 +84,45 @@ export function drawPfp(target: RenderTarget, model: RenderModel): void {
     PALETTE.yellow,
   )
 
-  ctx.textBaseline = 'alphabetic'
+  drawWaveLines(
+    ctx,
+    L.waves.x,
+    L.waves.y,
+    L.waves.width,
+    L.waves.rows,
+    L.waves.rowGap,
+    L.waves.amplitude,
+    L.waves.segments,
+    PALETTE['green-600'],
+    L.waves.lineWidth,
+  )
 
-  ctx.textAlign = 'left'
   ctx.fillStyle = PALETTE.cream
   ctx.font = `${L.eventLine.fontWeight} ${L.eventLine.fontSize}px ${L.eventLine.fontFamily}`
   ctx.letterSpacing = `${L.eventLine.letterSpacing}px`
   ctx.fillText(L.eventLine.text, L.eventLine.x, L.eventLine.baselineY)
 
+  ctx.textAlign = 'right'
   ctx.fillStyle = PALETTE.yellow
+  ctx.font = `${L.tag.fontWeight} ${L.tag.fontSize}px ${L.tag.fontFamily}`
+  ctx.letterSpacing = `${L.tag.letterSpacing}px`
+  ctx.fillText(L.tag.text, L.tag.rightX, L.tag.baselineY)
+
+  ctx.textAlign = 'left'
   ctx.font = `${L.yearLine.fontWeight} ${L.yearLine.fontSize}px ${L.yearLine.fontFamily}`
   ctx.letterSpacing = `${L.yearLine.letterSpacing}px`
+  ctx.lineWidth = L.yearLine.strokeWidth
+  ctx.strokeStyle = PALETTE.ink
+  ctx.fillStyle = PALETTE.pink
+  ctx.strokeText(L.yearLine.text, L.yearLine.x, L.yearLine.baselineY)
   ctx.fillText(L.yearLine.text, L.yearLine.x, L.yearLine.baselineY)
 
+  ctx.fillStyle = PALETTE['cream-dim']
+  ctx.font = `${L.microLine.fontWeight} ${L.microLine.fontSize}px ${L.microLine.fontFamily}`
+  ctx.letterSpacing = `${L.microLine.letterSpacing}px`
+  ctx.fillText(L.microLine.text, L.microLine.x, L.microLine.baselineY)
   ctx.letterSpacing = '0px'
-  ctx.textAlign = 'right'
-  ctx.fillStyle = PALETTE.pink
-  ctx.font = `${L.tag.fontWeight} ${L.tag.fontSize}px ${L.tag.fontFamily}`
-  // Pink on green-900 measures 4.50:1 — AA-large only, which this 52px display
-  // face satisfies. It would fail as body text (DESIGN_SYSTEM §3.3).
-  ctx.fillText(L.tag.text, L.tag.rightX, L.tag.baselineY)
-  ctx.textAlign = 'left'
 
-  // ── Sun mark ─────────────────────────────────────────────────────────────
   drawSunMark(
     ctx,
     L.sun.centreX,
@@ -114,6 +135,20 @@ export function drawPfp(target: RenderTarget, model: RenderModel): void {
     L.sun.strokeWidth,
   )
 
-  // ── Keyline last, so nothing paints over it ──────────────────────────────
+  for (const sparkle of L.sparkles) {
+    drawSparkle(ctx, sparkle.x, sparkle.y, sparkle.radius, PALETTE.pink)
+  }
+
+  strokeInset(
+    ctx,
+    {
+      x: L.keyline.innerInset,
+      y: L.keyline.innerInset,
+      width: L.canvas.width - L.keyline.innerInset * 2,
+      height: L.canvas.height - L.keyline.innerInset * 2,
+    },
+    L.keyline.innerWidth,
+    PALETTE.yellow,
+  )
   strokeInset(ctx, { x: 0, y: 0, ...L.canvas }, L.keyline.width, PALETTE.ink)
 }

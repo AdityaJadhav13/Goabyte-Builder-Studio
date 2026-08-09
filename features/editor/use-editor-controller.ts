@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react'
+import { useCallback, useMemo, useReducer, useRef } from 'react'
 import { prepareRenderAssets } from '@/features/render/assets'
 import {
   aspectOf,
@@ -91,6 +91,7 @@ export interface EditorController {
   readonly state: EditorState
   selectFile(file: File): void
   setFormat(format: OutputFormat): void
+  setCrop(format: OutputFormat, crop: CropRect): void
   setFields(fields: Partial<BuilderFields>): void
   download(): void
   startOver(): void
@@ -177,8 +178,8 @@ export function useEditorController(): EditorController {
             return
           }
 
-          // Automatic framing (D-9), one frame per format. Deterministic, so
-          // the preview the user sees is exactly what downloads.
+          // Automatic starting frame (D-9a), one per format. Optional user
+          // changes stay deterministic, so preview still exactly matches export.
           const crops = framesFor(image)
           const quality = effectiveResolution(
             crops[DEFAULT_FORMAT],
@@ -239,6 +240,14 @@ export function useEditorController(): EditorController {
     [exportSlot],
   )
 
+  const setCrop = useCallback(
+    (format: OutputFormat, crop: CropRect) => {
+      exportSlot.get().adopt(null)
+      dispatch({ type: 'crop-changed', format, crop })
+    },
+    [exportSlot],
+  )
+
   const download = useCallback(() => {
     if (!isEditing(state) || state.isExporting) return
 
@@ -277,7 +286,7 @@ export function useEditorController(): EditorController {
         })
       }
     })()
-  }, [state])
+  }, [state, exportSlot])
 
   const startOver = useCallback(() => {
     // Invalidate any in-flight run so its result is released, not adopted.
@@ -288,7 +297,7 @@ export function useEditorController(): EditorController {
   }, [imageSlot, exportSlot])
 
   return useMemo(
-    () => ({ state, selectFile, setFormat, setFields, download, startOver }),
-    [state, selectFile, setFormat, setFields, download, startOver],
+    () => ({ state, selectFile, setFormat, setCrop, setFields, download, startOver }),
+    [state, selectFile, setFormat, setCrop, setFields, download, startOver],
   )
 }

@@ -423,15 +423,14 @@ This is the division of labour between Nitin and Aditya: **Nitin waits, Aditya g
 
 ## 9. Framing — `lib/image/crop-geometry.ts`
 
-> **D-9: there is no crop UI.** Framing is automatic and deterministic. These
-> utilities serve automatic framing and renderer positioning, not a user-driven
-> editor. `react-easy-crop` has been removed from the dependency tree.
+> **D-9a: there is no required crop step.** Framing is automatic and
+> deterministic, with optional dependency-free zoom and X/Y controls after the
+> finished result appears. `react-easy-crop` remains out of the dependency tree.
 >
-> This raises the stakes on the maths rather than lowering them: nobody will
-> nudge a bad frame back into place, so `autoFrame` has to be right the first
-> time. `VERTICAL_SUBJECT_BIAS` now carries the product.
+> `autoFrame` must still be right without input; manual positioning is a rescue
+> path, not a gate before download.
 
-`react-easy-crop` reports both `croppedAreaPixels` (source pixels) and `croppedArea` (percentages). **We consume the percentage form and store normalized 0..1** (`FR-019`).
+**We store normalized 0..1 crop rectangles** (`FR-019`). UI values are converted by a pure function; no component or browser geometry enters renderer state.
 
 _Why:_ pixel coordinates are implicitly relative to whichever image was fed to the cropper. If `WORKING_MAX_EDGE` ever changes, or a code path feeds a different resolution, stored pixel crops silently mean something different — the single most likely source of a "crop is subtly wrong" bug that survives review because it looks nearly right.
 
@@ -439,6 +438,7 @@ Three pure functions, all trivially unit-testable and all covered:
 
 ```ts
 autoFrame(imageW, imageH, aspect): CropRect           // FR-017 — THE framing
+frameFromControls(imageW, imageH, aspect, controls)    // FR-016 — optional adjustment
 clampCrop(crop: CropRect): CropRect                  // FR-020 — bounds invariant
 cropToSourceRect(crop, image): { sx, sy, sw, sh }    // normalized → drawImage args
 effectiveResolution(crop, image, target): 'ok'|'soft' // FR-062
@@ -446,7 +446,7 @@ effectiveResolution(crop, image, target): 'ok'|'soft' // FR-062
 
 **The 42% vertical bias** (`FR-017`, improvement I4) is the highest-leverage line in the codebase. In portrait photographs faces sit above the geometric centre; a true centre crop routinely cuts foreheads. Biasing the frame centre to ~42% of image height produces a good result across ordinary phone photos. It costs nothing and needs no face detection (the `FaceDetector` API is Chromium-flag-only and not a real option).
 
-Under D-9 this constant is no longer a _default_ — it is the framing, with no correction step behind it. It is the single value most deserving of attention in usability testing.
+Under D-9a this constant defines the zero-input result and the exact reset target. It remains the single value most deserving of attention in usability testing.
 
 **`effectiveResolution`** implements D-6: quality is a property of the _crop_, not the source. A 4000px photo cropped to a tight 300px region cannot produce a sharp 1080px export, and the user is told so honestly rather than handed a soft image with no explanation.
 

@@ -1,11 +1,30 @@
 'use client'
 
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { CameraCaptureDialog } from '@/components/layout/CameraCaptureDialog'
 import { FormatShowcase } from '@/components/layout/FormatShowcase'
 import { ACCEPTED_FILE_TYPES } from '@/features/upload/accept'
 import { MAX_FILE_BYTES } from '@/features/upload/validate-file'
 
 const MAX_FILE_MB = Math.round(MAX_FILE_BYTES / 1024 / 1024)
+
+function cameraErrorCopy(cause: unknown): string {
+  if (!window.isSecureContext) {
+    return 'Live camera access requires HTTPS. Use the device camera picker instead.'
+  }
+  if (cause instanceof DOMException) {
+    if (cause.name === 'NotAllowedError' || cause.name === 'SecurityError') {
+      return 'Camera permission was blocked. Allow camera access in your browser settings and try again.'
+    }
+    if (cause.name === 'NotFoundError' || cause.name === 'DevicesNotFoundError') {
+      return 'No camera was found on this device.'
+    }
+    if (cause.name === 'NotReadableError' || cause.name === 'TrackStartError') {
+      return 'Another app may be using the camera. Close it and try again.'
+    }
+  }
+  return 'The browser could not start the live camera. Try the device camera picker.'
+}
 
 /**
  * The first-step UI. It collects only information the existing editor can
@@ -24,16 +43,25 @@ export function LandingForm({
   const cameraRef = useRef<HTMLInputElement>(null)
   const previewUrlRef = useRef<string | null>(null)
   const dragDepth = useRef(0)
+  const cameraRequestIdRef = useRef(0)
+  const cameraStreamRef = useRef<MediaStream | null>(null)
 
   const [photo, setPhoto] = useState<File | null>(null)
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null)
   const [name, setName] = useState('')
   const [role, setRole] = useState('')
   const [isDragActive, setDragActive] = useState(false)
+  const [cameraOpen, setCameraOpen] = useState(false)
+  const [cameraStarting, setCameraStarting] = useState(false)
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null)
+  const [cameraError, setCameraError] = useState<string | null>(null)
 
   useEffect(
     () => () => {
       if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current)
+      cameraRequestIdRef.current += 1
+      cameraStreamRef.current?.getTracks().forEach((track) => track.stop())
+      cameraStreamRef.current = null
     },
     [],
   )
@@ -50,6 +78,73 @@ export function LandingForm({
     if (!photo) return
     onSubmit({ file: photo, name, role })
   }, [photo, name, role, onSubmit])
+
+  const closeCamera = useCallback(() => {
+    cameraRequestIdRef.current += 1
+    cameraStreamRef.current?.getTracks().forEach((track) => track.stop())
+    cameraStreamRef.current = null
+    setCameraStream(null)
+    setCameraStarting(false)
+    setCameraError(null)
+    setCameraOpen(false)
+  }, [])
+
+  const openCamera = useCallback(async () => {
+    const requestId = cameraRequestIdRef.current + 1
+    cameraRequestIdRef.current = requestId
+    cameraStreamRef.current?.getTracks().forEach((track) => track.stop())
+    cameraStreamRef.current = null
+    setCameraStream(null)
+    setCameraError(null)
+    setCameraStarting(true)
+    setCameraOpen(true)
+
+    if (!navigator.mediaDevices?.getUserMedia || !window.isSecureContext) {
+      if (cameraRequestIdRef.current === requestId) {
+        setCameraStarting(false)
+        setCameraError(cameraErrorCopy(null))
+      }
+      return
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: {
+          facingMode: { ideal: 'user' },
+          width: { ideal: 1280 },
+          height: { ideal: 1280 },
+        },
+      })
+
+      if (cameraRequestIdRef.current !== requestId) {
+        stream.getTracks().forEach((track) => track.stop())
+        return
+      }
+
+      cameraStreamRef.current = stream
+      setCameraStream(stream)
+    } catch (cause) {
+      if (cameraRequestIdRef.current === requestId) {
+        setCameraError(cameraErrorCopy(cause))
+      }
+    } finally {
+      if (cameraRequestIdRef.current === requestId) setCameraStarting(false)
+    }
+  }, [])
+
+  const handleCameraCapture = useCallback(
+    (file: File) => {
+      handleFileSelected(file)
+      closeCamera()
+    },
+    [closeCamera, handleFileSelected],
+  )
+
+  const openDeviceCameraPicker = useCallback(() => {
+    closeCamera()
+    cameraRef.current?.click()
+  }, [closeCamera])
 
   const handleDrop = useCallback(
     (event: React.DragEvent<HTMLDivElement>) => {
@@ -158,7 +253,7 @@ export function LandingForm({
               <button
                 type="button"
                 className="photo-btn"
-                onClick={() => cameraRef.current?.click()}
+                onClick={() => void openCamera()}
                 id="take-photo-btn"
                 aria-label="Take photo with camera"
               >
@@ -282,9 +377,23 @@ export function LandingForm({
         className="sr-only"
         onChange={(event) => {
           const file = event.target.files?.[0]
-          if (file) handleFileSelected(file)
+          if (file) {
+            handleFileSelected(file)
+            closeCamera()
+          }
           event.target.value = ''
         }}
+      />
+
+      <CameraCaptureDialog
+        open={cameraOpen}
+        stream={cameraStream}
+        isStarting={cameraStarting}
+        error={cameraError}
+        onClose={closeCamera}
+        onRetry={() => void openCamera()}
+        onFallback={openDeviceCameraPicker}
+        onCapture={handleCameraCapture}
       />
     </div>
   )

@@ -4,10 +4,11 @@ import type { SourceRect } from '@/lib/canvas/cover-fit'
  * Framing maths. Pure, DOM-free, and the highest-value unit-test target in the
  * codebase — a subtly wrong frame looks *nearly* right and survives review.
  *
- * There is no crop UI (D-9). These utilities now serve automatic framing and
- * renderer positioning rather than a user-driven editor, which raises the
- * stakes: nobody is going to nudge a bad result back into place by hand, so
- * the computed frame has to be right the first time.
+ * Automatic framing remains the starting point, while the editor can now
+ * derive a tighter frame from three simple controls: zoom, horizontal
+ * position and vertical position. Keeping that maths here (rather than in a
+ * React component) guarantees the preview and downloaded PNG use the exact
+ * same normalized crop.
  *
  * Frames are expressed in NORMALIZED 0–1 coordinates relative to the working
  * image (FR-019). Not pixels: pixel coordinates are implicitly bound to a
@@ -25,6 +26,43 @@ export interface CropRect {
 export interface ImageDimensions {
   readonly width: number
   readonly height: number
+}
+
+export interface FrameControls {
+  /** 1 = automatic frame, 3 = three-times tighter. */
+  readonly zoom: number
+  /** -100 = left edge, 0 = automatic position, 100 = right edge. */
+  readonly positionX: number
+  /** -100 = top edge, 0 = automatic position, 100 = bottom edge. */
+  readonly positionY: number
+}
+
+export const MIN_FRAME_ZOOM = 1
+export const MAX_FRAME_ZOOM = 3
+export const MIN_FRAME_POSITION = -100
+export const MAX_FRAME_POSITION = 100
+/** At an image edge, reserve 35% zoom so both axes always have travel. */
+export const FRAME_POSITION_ZOOM_ASSIST = 0.35
+
+export const DEFAULT_FRAME_CONTROLS: FrameControls = {
+  zoom: MIN_FRAME_ZOOM,
+  positionX: 0,
+  positionY: 0,
+}
+
+/**
+ * A crop using the full source height cannot move vertically, and one using
+ * the full width cannot move horizontally. Positioning therefore applies the
+ * smallest visible zoom needed to create safe in-bounds travel on both axes.
+ */
+export function minimumZoomForPosition(positionX: number, positionY: number): number {
+  const furthestPosition = Math.max(
+    Math.abs(clamp(positionX, MIN_FRAME_POSITION, MAX_FRAME_POSITION)),
+    Math.abs(clamp(positionY, MIN_FRAME_POSITION, MAX_FRAME_POSITION)),
+  )
+  return (
+    MIN_FRAME_ZOOM + (furthestPosition / MAX_FRAME_POSITION) * FRAME_POSITION_ZOOM_ASSIST
+  )
 }
 
 /**
@@ -68,6 +106,45 @@ export function autoFrame(
     width: normalizedWidth,
     height: normalizedHeight,
   }
+}
+
+/**
+ * Convert user-facing zoom/position controls into a normalized source crop.
+ *
+ * Position zero preserves the subject-biased automatic frame. Moving a slider
+ * interpolates from that neutral point to the corresponding image edge, so a
+ * user can rescue an off-centre subject even at 1× zoom. At tighter zooms the
+ * neutral point stays anchored to the original automatic subject centre.
+ */
+export function frameFromControls(
+  imageWidth: number,
+  imageHeight: number,
+  aspect: number,
+  controls: FrameControls,
+): CropRect {
+  const base = autoFrame(imageWidth, imageHeight, aspect)
+  const zoom = Math.max(
+    clamp(controls.zoom, MIN_FRAME_ZOOM, MAX_FRAME_ZOOM),
+    minimumZoomForPosition(controls.positionX, controls.positionY),
+  )
+  const width = base.width / zoom
+  const height = base.height / zoom
+  const neutralX = clamp(base.x + base.width / 2 - width / 2, 0, 1 - width)
+  const neutralY = clamp(base.y + base.height / 2 - height / 2, 0, 1 - height)
+
+  const position = (neutral: number, maximum: number, value: number): number => {
+    const safeValue = clamp(value, MIN_FRAME_POSITION, MAX_FRAME_POSITION)
+    return safeValue < 0
+      ? neutral * ((safeValue + 100) / 100)
+      : neutral + (maximum - neutral) * (safeValue / 100)
+  }
+
+  return clampCrop({
+    x: position(neutralX, 1 - width, controls.positionX),
+    y: position(neutralY, 1 - height, controls.positionY),
+    width,
+    height,
+  })
 }
 
 /**

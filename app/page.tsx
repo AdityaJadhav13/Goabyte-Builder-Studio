@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react'
 import { Hero } from '@/components/layout/Hero'
 import { LandingForm } from '@/components/layout/LandingForm'
+import { AboutUs } from '@/components/layout/AboutUs'
 import { EditorShell } from '@/features/editor/components/EditorShell'
 
 /**
@@ -32,27 +33,26 @@ export default function Home() {
     [],
   )
 
+  const handleReturnHome = useCallback(() => {
+    setPendingSubmit(null)
+    setEditorMode(false)
+  }, [])
+
   /* Once in editor mode, show the full editor workspace. */
   if (editorMode) {
     return (
-      <div className="min-h-dvh">
-        <header className="border-b-2 border-ink bg-green-900">
-          <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-4 sm:px-8">
-            <div className="flex min-w-0 items-center gap-3">
-              <span className="grid size-9 shrink-0 place-items-center border-2 border-yellow bg-green-800 font-display text-lg text-yellow shadow-ink-sm">
-                G
-              </span>
+      <div className="editor-app-shell">
+        <header className="editor-app-header">
+          <div className="editor-app-header-inner">
+            <div className="editor-app-brand">
+              <span className="editor-app-brand-mark">G</span>
               <div className="min-w-0">
-                <p className="text-[11px] font-bold tracking-[0.18em] text-yellow uppercase">
-                  GoaByte
-                </p>
-                <p className="truncate text-xs font-semibold text-cream">
-                  Builder Studio
-                </p>
+                <p className="editor-app-brand-name">GoaByte</p>
+                <p className="editor-app-brand-product">Builder Studio</p>
               </div>
             </div>
 
-            <p className="flex items-center gap-2 text-[10px] font-bold tracking-[0.1em] text-cream-dim/75 uppercase sm:text-[11px]">
+            <p className="editor-app-privacy">
               <svg
                 width="14"
                 height="14"
@@ -71,9 +71,10 @@ export default function Home() {
           </div>
         </header>
 
-        <main className="mx-auto max-w-6xl px-5 py-7 sm:px-8 sm:py-12">
+        <main className="editor-app-main">
           <EditorShell
             initialFile={pendingSubmit?.file}
+            onReturnHome={handleReturnHome}
             initialFields={
               pendingSubmit
                 ? { name: pendingSubmit.name, role: pendingSubmit.role }
@@ -82,9 +83,9 @@ export default function Home() {
           />
         </main>
 
-        <footer className="mt-8 border-t-2 border-ink bg-green-900">
-          <div className="mx-auto max-w-6xl px-5 py-8 sm:px-8">
-            <p className="max-w-3xl text-xs leading-relaxed text-cream-dim/75">
+        <footer className="editor-app-footer">
+          <div className="editor-app-footer-inner">
+            <p>
               An independent project by team GoaByte, built for the Hacker House Goa 2026
               open trial. Hacker House Goa artwork is used with permission. Your photo is
               processed entirely in your browser and is never uploaded.
@@ -109,17 +110,13 @@ export default function Home() {
       </main>
 
       <footer className="landing-footer">
-        {/* Was href="#about", which pointed at nothing. A judge who clicks a
-            dead link has found a bug before they have used the product. */}
-        <a
-          href="https://github.com/AdityaJadhav13/Goabyte-Builder-Studio"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="landing-footer-link"
-        >
-          About this project
+        <a href="#about-us" className="landing-footer-link">
+          About us
+          <span aria-hidden="true">↓</span>
         </a>
       </footer>
+
+      <AboutUs />
     </div>
   )
 }

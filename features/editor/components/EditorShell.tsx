@@ -15,8 +15,8 @@ import { isEditing, type PreparationStage } from '../editor-state'
  * Routes editor phase → UI. One responsibility: deciding what is on screen.
  * It holds no pipeline logic and no editor state of its own.
  *
- * There is no crop step (D-9). Upload lands the user directly on a finished,
- * automatically framed result.
+ * There is no required crop step (D-9a). Upload lands the user directly on a
+ * finished automatic result; optional controls in the workspace can refine it.
  *
  * The workspace is a separate chunk so the landing view does not carry the
  * render layer (NFR-002). It is PREFETCHED as soon as a file is chosen, which
@@ -37,6 +37,7 @@ const STAGE_COPY: Record<PreparationStage, string> = {
 export function EditorShell({
   initialFile,
   initialFields,
+  onReturnHome,
 }: {
   /** When provided (from the landing form), the editor auto-loads this file
    *  on mount, skipping the idle dropzone. */
@@ -47,6 +48,8 @@ export function EditorShell({
    * in the editor with empty fields and had to type them again.
    */
   readonly initialFields?: { readonly name: string; readonly role: string }
+  /** Leave the editor and restore the actual landing page. */
+  readonly onReturnHome?: () => void
 }) {
   const editor = useEditorController()
   const { state } = editor
@@ -101,7 +104,9 @@ export function EditorShell({
         </Panel>
       ) : null}
 
-      {editingNow ? <EditorWorkspace state={state} editor={editor} /> : null}
+      {editingNow ? (
+        <EditorWorkspace state={state} editor={editor} onReturnHome={onReturnHome} />
+      ) : null}
 
       {state.phase === 'idle' ? (
         /* ONE opaque card carrying the entire first step, floating on the

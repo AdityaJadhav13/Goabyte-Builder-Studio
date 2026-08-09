@@ -6,10 +6,11 @@ import { join } from 'node:path'
  * SLICE 1 GATE.
  *
  * Exercises: photo → raw validation → decode → decoded validation → normalize
- * → automatic framing → prepare dependencies → synchronous renderer → canvas
+ * → automatic framing/manual positioning → prepare dependencies → synchronous renderer → canvas
  * preview → 1080×1080 PNG export → download.
  *
- * No crop step (D-9): upload lands directly on a finished result.
+ * Upload still lands directly on a finished result; optional zoom and position
+ * controls let a user refine the frame without blocking download.
  *
  * What this CANNOT cover, and must not be read as covering: genuine iPhone
  * HEIC, iOS memory ceilings, real download behaviour on iOS Safari, and native
@@ -34,10 +35,10 @@ async function upload(page: Page, file: string) {
   // test exercises the same route a real user takes.
   const landingContinue = page.locator('#continue-btn')
   if (await landingContinue.count()) {
-    await page.setInputFiles(
-      '#upload-photo-btn ~ input[type="file"], input[type="file"]',
-      fixture(file),
-    )
+    // The camera flow owns a second capture-enabled file input as a fallback.
+    // Target only Browse Photos so this helper cannot silently feed the wrong
+    // control when both inputs are mounted.
+    await page.setInputFiles('input[type="file"]:not([capture])', fixture(file))
     await landingContinue.click()
     return
   }
@@ -177,14 +178,70 @@ test('the PFP graphic carries the required hashtag', async ({ page }) => {
   await expect(page.getByRole('img', { name: /Preview at 1080×1080/ })).toBeVisible()
 })
 
-test('no crop UI stands between upload and download (D-9)', async ({ page }) => {
+test('photo controls update the graphic and can reset to the automatic frame', async ({
+  page,
+}) => {
   await upload(page, 'portrait.jpg')
   await expectEditorReady(page)
 
-  // The download control is the primary action, reachable immediately.
+  // Controls are optional: the automatic result is still download-ready.
   await expect(page.getByRole('button', { name: 'Download PNG' })).toBeEnabled()
-  await expect(page.getByRole('button', { name: /crop/i })).toHaveCount(0)
-  await expect(page.getByText(/drag to reposition|pinch|zoom/i)).toHaveCount(0)
+
+  const preview = page.getByRole('img', { name: /Preview at 1080×1080/ })
+  const automatic = await preview.evaluate((canvas: HTMLCanvasElement) =>
+    canvas.toDataURL(),
+  )
+
+  // Each position axis must work independently from the initial 1× frame.
+  await page.getByLabel('Left / right').fill('65')
+
+  await expect
+    .poll(() => preview.evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL()))
+    .not.toBe(automatic)
+
+  await page.getByRole('button', { name: 'Reset auto frame' }).click()
+  await expect
+    .poll(() => preview.evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL()))
+    .toBe(automatic)
+
+  await page.getByLabel('Up / down').fill('-65')
+  await expect
+    .poll(() => preview.evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL()))
+    .not.toBe(automatic)
+
+  await page.getByRole('button', { name: 'Reset auto frame' }).click()
+  await expect(page.getByLabel('Zoom')).toHaveValue('1')
+  await expect(page.getByLabel('Left / right')).toHaveValue('0')
+  await expect(page.getByLabel('Up / down')).toHaveValue('0')
+  await expect
+    .poll(() => preview.evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL()))
+    .toBe(automatic)
+})
+
+test('desktop editor fits inside one viewport without page scrolling', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await upload(page, 'portrait.jpg')
+  await expectEditorReady(page)
+
+  const pfpMetrics = await page.evaluate(() => ({
+    viewport: window.innerHeight,
+    page: document.documentElement.scrollHeight,
+  }))
+  expect(pfpMetrics.page).toBeLessThanOrEqual(pfpMetrics.viewport)
+
+  await page.getByText('Builder ID', { exact: true }).click()
+  await expect(page.getByRole('img', { name: /Preview at 1080×1350/ })).toBeVisible()
+  await expect(page.getByLabel('Your name')).toBeVisible()
+  const builderMetrics = await page.evaluate(() => ({
+    viewport: window.innerHeight,
+    page: document.documentElement.scrollHeight,
+    railViewport: document.querySelector('.editor-control-rail')?.clientHeight ?? 0,
+    railContent: document.querySelector('.editor-control-rail')?.scrollHeight ?? 0,
+  }))
+  expect(builderMetrics.page).toBeLessThanOrEqual(builderMetrics.viewport)
+  expect(builderMetrics.railContent).toBeLessThanOrEqual(builderMetrics.railViewport)
 })
 
 test('the same photo always produces an identical graphic (NFR-035)', async ({
@@ -237,7 +294,12 @@ test('start over returns to a clean idle state without reloading', async ({ page
 
   await page.getByRole('button', { name: 'Start over' }).click()
 
-  await expect(page.getByText('Choose a photo')).toBeVisible()
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'Builder Studio' }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: 'Upload photo from device' }),
+  ).toBeVisible()
   await expect(page.getByRole('img', { name: /Preview at/ })).toHaveCount(0)
 
   await upload(page, 'portrait.jpg')

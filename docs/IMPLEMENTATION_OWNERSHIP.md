@@ -1,8 +1,8 @@
 # Task 1 implementation plan — Codex UI / Claude product logic
 
 **Decision owner:** Aditya  
-**UI owner:** Codex  
-**Image, state, export, QA and deployment owner:** Claude
+**UI and export visual-design owner:** Codex
+**Image pipeline, state, export mechanics, QA and deployment owner:** Claude
 
 This is the integration contract for the Hacker House Goa 2026 Task 1 submission. It prevents both implementation tracks from editing the same concerns and keeps the primary flow focused on a successful mobile export in under 30 seconds.
 
@@ -13,11 +13,17 @@ This is the integration contract for the Hacker House Goa 2026 Task 1 submission
 - GoaByte landing hierarchy and responsive split layout.
 - Miniature proof of Profile Picture and Builder ID outputs.
 - Desktop drag/drop presentation plus Browse Photos and Use Camera actions.
+- Premium glass upload form with aurora refraction, light sweep and layered glass controls.
+- Live on-device camera preview, permission/error states and JPEG capture.
 - Supported-format and on-device privacy messaging beside upload.
 - Selected-photo presentation and change action.
 - Builder-ID-only optional-field presentation.
 - Dimension-aware accessible format selector.
 - Editor masthead and compact generated/share-success treatment.
+- Start-over navigation back to the actual landing page.
+- About Us section with the GoaByte roster, responsibilities and LinkedIn actions.
+- Original Goa-after-dark PFP and Builder ID poster templates with layered borders,
+  editorial type, portrait ID framing, halftone, palm and wave motifs.
 - Visual checks at 320, 375, 390, 768 and 1440 px with no horizontal overflow.
 
 ### Claude next
@@ -54,25 +60,29 @@ This is the integration contract for the Hacker House Goa 2026 Task 1 submission
 - Team Pass / multi-person wizard.
 - Accounts, databases and public generated-result URLs.
 - Telegram and LinkedIn sharing.
-- Required crop step. An optional “Adjust photo” control may be reconsidered only if real-photo testing shows automatic framing failures.
+- Required crop step or heavyweight crop dependency. The shipped Frame Lab remains optional after the automatic result.
 - Theme switcher, animations that do not communicate state, and decorative controls that look clickable.
 
 ## 2. Ownership boundary
 
-| Area          | Codex — UI                                                                  | Claude — non-UI                                                           |
-| ------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| Design system | Layout, typography, colour, spacing, responsive rules, motion               | Keep canvas palette tokens in parity with the UI tokens                   |
-| Landing       | Hero, format proof, upload presentation, form presentation, trust copy      | File validation and passing accepted data into editor state               |
-| Upload        | Drag-hover UI, browse/camera affordances, selected-file presentation        | MIME sniffing, HEIC conversion, decode, EXIF, limits and errors           |
-| Editor        | Format selector, preview layout, field layout, buttons and responsive order | Reducer/controller, automatic framing, render model and state transitions |
-| Canvas        | Preview container and accessible description                                | All canvas drawing and preview/export parity                              |
-| Export        | Loading/disabled/success/error presentation                                 | PNG generation, exact dimensions, filename and download behavior          |
-| Share         | Share panel design and status-message presentation                          | Web Share API, clipboard, X intent and popup fallbacks                    |
-| Accessibility | Semantics, focus, labels, tap targets, contrast, reduced motion             | Error codes and state announcements supplied to the UI                    |
-| QA            | Visual QA at 320/375/390/768/1024/1440 px                                   | Unit, integration, E2E, real-device HEIC/share/memory testing             |
-| Delivery      | UI handoff and visual acceptance checklist                                  | Build, production verification, Vercel deployment and submission checks   |
+| Area          | Codex — UI                                                                                | Claude — non-UI                                                             |
+| ------------- | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| Design system | Layout, typography, colour, spacing, responsive rules, motion                             | Keep canvas palette tokens in parity with the UI tokens                     |
+| Landing       | Hero, format proof, upload presentation, form presentation, trust copy                    | File validation and passing accepted data into editor state                 |
+| Upload        | Drag-hover UI, browse/camera affordances, selected-file presentation                      | MIME sniffing, HEIC conversion, decode, EXIF, limits and errors             |
+| Editor        | Format selector, optional Frame Lab, preview layout, fields, buttons and responsive order | Decode pipeline, automatic starting frame, render model and lifecycle state |
+| Canvas        | Preview container, accessible description, template composition and art                   | Rendering contracts, crop math and preview/export parity                    |
+| Export        | Loading/disabled/success/error presentation                                               | PNG generation, exact dimensions, filename and download behavior            |
+| Share         | Share panel design and status-message presentation                                        | Web Share API, clipboard, X intent and popup fallbacks                      |
+| Accessibility | Semantics, focus, labels, tap targets, contrast, reduced motion                           | Error codes and state announcements supplied to the UI                      |
+| QA            | Visual QA at 320/375/390/768/1024/1440 px                                                 | Unit, integration, E2E, real-device HEIC/share/memory testing               |
+| Delivery      | UI handoff and visual acceptance checklist                                                | Build, production verification, Vercel deployment and submission checks     |
 
-Codex must not change image decoding, crop math, canvas drawing, export or share behavior. Claude must not restyle or restructure UI components without first updating this contract or coordinating the prop/state change.
+Codex must not change image decoding, export mechanics or share behavior. For the explicitly
+requested optional Frame Lab, Codex may maintain the small pure control-to-crop mapping and its
+state action. Codex may also change deterministic canvas composition and layout values when the
+request is visual, while preserving renderer contracts and exact dimensions. Claude must not restyle or restructure UI
+components without first updating this contract or coordinating the prop/state change.
 
 ## 3. Step-by-step implementation
 

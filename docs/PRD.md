@@ -205,10 +205,10 @@ The caption always contains `#FrameInGoa`. We never say the image is attached un
 
 ### Crop
 
-- ~~**FR-016** Provide drag-to-reposition and zoom via `react-easy-crop`…~~ **SUPERSEDED by D-9.** No crop UI is rendered. `react-easy-crop` is removed from the dependency tree.
-- **FR-017** Frame automatically and deterministically: the largest region of the target aspect that fits the image, centred horizontally and biased to ~42% of image height vertically. This is _the_ framing, not a default a user overrides — there is no correction step, so it has to be right the first time.
-- ~~**FR-018** Provide a Reset control…~~ **SUPERSEDED by D-9.** Nothing to reset.
-- **FR-063** The primary flow is upload → automatic framing → preview → download. No step may be inserted between upload and a downloadable result. Replacing the photo and starting over are the only editor actions.
+- **FR-016** Provide optional zoom plus horizontal and vertical positioning without a heavyweight crop dependency. Controls update the shared normalized crop used by preview and export and are never a required step.
+- **FR-017** Start automatically and deterministically: use the largest region of the target aspect that fits the image, centred horizontally and biased to ~42% of image height vertically. This remains the zero-input result and reset target.
+- **FR-018** Provide a Reset auto frame control that restores zoom 1× and both positions to automatic.
+- **FR-063** The primary flow remains upload → automatic framing → preview → download. No step may be inserted between upload and a downloadable result; adjustments are progressive enhancement and download is enabled before they are touched.
 - **FR-064** Framing is deterministic: the same photo always yields the same graphic, with no randomness or time dependence (NFR-035).
 - **FR-019** Store crop rectangles in normalized coordinates relative to the `NormalizedImage`, independently per format.
 - **FR-020** Clamp crop rectangles to image bounds; an out-of-bounds rectangle is impossible by construction, not by validation.
@@ -556,6 +556,8 @@ _What this bought beyond UX:_ the crop editor was the only reason `NormalizedIma
 _Trade-off, stated plainly:_ a user who dislikes the automatic framing has no recourse but to upload a different photo. That is a real cost, accepted because the 42% vertical bias handles ordinary phone photos well and because forcing a crop on everyone to serve a minority is the worse trade. **The mitigation is measurement, not assumption:** if usability testing shows automatic framing failing on real photos, an optional "Adjust position" panel ships as S1-8 — progressive enhancement, never a required step.
 
 _Consequence to watch:_ `VERTICAL_SUBJECT_BIAS` now carries the entire product. It is the difference between a good graphic and a decapitated one, with no manual correction available. It deserves explicit attention in usability testing.
+
+**D-9a — Optional frame controls activate S1-8.** _(9 Aug 2026, supersedes the no-recourse portion of D-9.)_ Real-photo review requested a way to set and zoom the subject. Automatic framing remains the immediate, downloadable default, while an optional Frame Lab exposes 1–3× zoom and independent X/Y positioning per output format. The implementation stays dependency-light and stores only normalized crop rectangles; reset returns exactly to `autoFrame`. This preserves D-9's one-click primary flow while removing its acknowledged failure mode for off-centre subjects.
 
 **D-8 — Privacy is an invariant, not a claim.** NFR-037 enumerates the prohibited mechanisms explicitly, so "your photo never leaves your device" is enforced by the absence of any code path that could violate it, not by intent.
 
