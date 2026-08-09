@@ -1,4 +1,5 @@
 import { drawBuilderCard } from './templates/builder-card.draw'
+import { drawCrew } from './templates/crew.draw'
 import { drawPfp } from './templates/pfp.draw'
 import type { RenderAssets, RenderModel, RenderTarget } from './types'
 
@@ -25,8 +26,6 @@ export function renderTemplate(
   model: RenderModel,
   assets: RenderAssets,
 ): void {
-  void assets
-
   const { ctx, scale } = target
 
   ctx.save()
@@ -35,14 +34,18 @@ export function renderTemplate(
 
   switch (model.format) {
     case 'pfp':
-      drawPfp(target, model)
+      drawPfp(target, model, assets)
       break
     case 'builder-card':
-      drawBuilderCard(target, model)
+      drawBuilderCard(target, model, assets)
       break
-    // No default: `OutputFormat` is a closed union, so adding a format makes
-    // this switch non-exhaustive and fails typecheck here — which is exactly
-    // the reminder we want.
+    case 'crew':
+      drawCrew(target, model, assets)
+      break
+    default: {
+      const unreachable: never = model.format
+      throw new Error(`Unsupported output format: ${String(unreachable)}`)
+    }
   }
 
   ctx.restore()

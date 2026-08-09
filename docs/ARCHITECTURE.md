@@ -211,12 +211,20 @@ export interface CropRect {
 }
 
 // ─── features/render/types.ts ─────────────────────────────────────────────
-export type OutputFormat = 'pfp' | 'builder-card'
+export type OutputFormat = 'pfp' | 'builder-card' | 'crew'
+export type PfpFrameId = 'heritage' | 'postcard' | 'midnight'
 
 export interface BuilderFields {
   readonly name: string
   readonly role: string
+  readonly team: string
   readonly title: string | null // null ⇒ omit from layout, reflow. FR-033
+}
+
+export interface CrewFields {
+  readonly teamName: string
+  readonly projectUrl: string // encoded into the Crew QR
+  readonly members: readonly CrewMember[] // 0–3 extras; main photo is leader
 }
 
 export interface RenderModel {
@@ -224,7 +232,8 @@ export interface RenderModel {
   readonly image: NormalizedImage
   readonly crop: CropRect
   readonly fields: BuilderFields | null // null for 'pfp'
-  readonly variant: string // template colourway, S1-3
+  readonly pfpFrame: PfpFrameId
+  readonly crew: CrewFields | null // non-null only for 'crew'
 }
 
 export interface RenderTarget {
@@ -284,6 +293,7 @@ export function exportPng(model: RenderModel): Promise<ExportResult>
 export const DESIGN = {
   pfp: { width: 1080, height: 1080 }, // FR-021
   'builder-card': { width: 1080, height: 1350 }, // FR-025, D-4
+  crew: { width: 2048, height: 1362 },
 } as const
 
 export const WORKING_MAX_EDGE = 2400 // FR-012
@@ -297,7 +307,7 @@ export const PREVIEW_DPR_CAP = 2 // FR-039
 
 ## 6. The design-space coordinate system
 
-**All layout is authored in design units.** The PFP design space is 1080×1080; the card is 1080×1350. Layout configs contain design units and nothing else — no device pixels, no CSS pixels, no percentages of a container.
+**All layout is authored in design units.** The PFP design space is 1080×1080, the Builder ID is 1080×1350, and the Crew Frame is a true 2048×1362 landscape canvas. Layout configs contain design units and nothing else — no device pixels, no CSS pixels, no percentages of a container.
 
 The renderer applies exactly one transform at entry:
 
@@ -551,27 +561,28 @@ The third rung is not a fallback that fires on error — it is **always present*
 
 ## 12. Share — `features/share/`
 
-**PROVISIONAL** — exact UI wording is set by SPIKE-2's observed behaviour, not by specification (D-7).
+**PROVISIONAL** — exact receiving-app behaviour remains gated on SPIKE-3's real-device observations (D-7). The browser-facing wording below only states what the browser can prove.
 
 ```
 ExportResult
  │
- ├─ navigator.canShare?.({ files: [png] }) === true
- │     ├─ copy caption to clipboard  (iOS may drop shared text)  FR-056
- │     ├─ navigator.share({ files, text })
- │     ├─ resolved  → "Shared. Caption copied — paste it if X didn't fill it in."
- │     └─ rejected/dismissed → fall through ↓
+ ├─ navigator.canShare?.({ files: [png], text: caption }) === true
+ │     ├─ start navigator.share({ files, text }) first, in the click task
+ │     ├─ start caption clipboard copy in that same task  (iOS may drop text)  FR-056
+ │     ├─ resolved  → "PNG sent to the app you chose" + caption-copy result
+ │     └─ dismissed → keep preview, download and copy actions visible
  │
  └─ fallback ladder
-       ├─ ensure PNG is downloaded
-       ├─ window.open('https://x.com/intent/post?text=…')   ← SYNCHRONOUS  FR-053
-       ├─ popup blocked (returns null) → show a real <a> + copy-caption  FR-054
-       └─ UI states plainly: "Your image is downloaded — attach it to the post."
+       ├─ keep the PNG preview and Download again action visible
+       ├─ open about:blank synchronously, detach opener, navigate to x.com/intent/post
+       ├─ popup/navigation blocked → show a real <a> + copy-caption  FR-054
+       ├─ offer PNG clipboard copy where secure-context support exists
+       └─ UI states plainly: "Attach the downloaded PNG before posting."
 ```
 
 Three rules that are not negotiable:
 
-**The window opens synchronously inside the click handler** (`FR-053`). Safari blocks `window.open` that follows an `await`. This is why export completes _before_ the share control enables — so the handler itself performs no async work. Architecture accommodating a browser constraint, rather than discovering it during QA on the 12th.
+**Privileged actions start synchronously inside the click handler** (`FR-053`). Safari blocks `window.open` or `navigator.share` after transient user activation is lost. The native branch starts file sharing before awaiting its parallel caption-copy promise. The fallback opens a detectable blank tab first, detaches `opener`, and only then navigates it to X; passing `noopener` directly to `window.open` makes Chromium return `null` even when the tab opened, so that return value cannot distinguish a real block.
 
 **The caption always contains `#FrameInGoa`** (`FR-050`). `share-copy.ts` exports variants through one factory that appends the hashtag, and a unit test iterates every exported variant asserting the literal string. The submission is invalid without it; it gets a test, not a code review.
 
@@ -711,7 +722,7 @@ A PR introducing any network call capable of carrying user content requires Adit
 
 Decisions already recorded as D-1 … D-8 in `PRD.md` §13 are binding and not restated. These are the additional decisions this document introduces.
 
-**ADR-1 — Merge PFP and Builder Card into `features/render/`.** Covered in §3. _Why:_ prevents duplicated cover-fit and text-fitting logic drifting into two divergent implementations. _Alternatives:_ separate features with a shared lib (shared module absorbs everything meaningful); full duplication (guaranteed drift). _Trade-off:_ one large module needing internal discipline, imposed by the layout/draw file split. _Future:_ a third format costs one config pair and one union member.
+**ADR-1 — Keep PFP, Builder ID and Crew Frame in `features/render/`.** Covered in §3. _Why:_ prevents duplicated cover-fit and text-fitting logic drifting into divergent implementations. _Alternatives:_ separate features with a shared lib (shared module absorbs everything meaningful); full duplication (guaranteed drift). _Trade-off:_ one larger module needing internal discipline, imposed by the layout/draw file split. The shipped Crew Frame validated the extension point: one layout/draw pair plus one closed-union member.
 
 **ADR-2 — Normalized crop coordinates rather than source pixels.** _Why:_ pixel coordinates are implicitly bound to a resolution; changing `WORKING_MAX_EDGE` would silently change what a stored crop means. _Alternative:_ store pixels plus the resolution they refer to — same information, more invariants to maintain by hand. _Trade-off:_ one conversion at `drawImage` time. _Future:_ export presets can change without touching crop logic.
 

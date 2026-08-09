@@ -1,154 +1,113 @@
+import { frameById, type PfpFrameDefinition } from '@/features/render/frame-catalog'
 import { PALETTE } from '@/lib/brand/palette'
-import {
-  drawChip,
-  drawScrim,
-  drawSunMark,
-  fillRect,
-  strokeInset,
-} from '@/lib/canvas/draw-primitives'
-import { drawHalftone, drawSparkle, drawWaveLines } from '@/lib/canvas/poster-motifs'
+import { fillRect, roundedRectPath } from '@/lib/canvas/draw-primitives'
 import { cropToSourceRect } from '@/lib/image/crop-geometry'
-import type { RenderModel, RenderTarget } from '../types'
+import type { RenderAssets, RenderModel, RenderTarget } from '../types'
 import { PFP_LAYOUT as L } from './pfp.layout'
 
-function drawCornerBrackets(ctx: CanvasRenderingContext2D): void {
-  const { inset, length, width: lineWidth } = L.corners
-  const right = L.canvas.width - inset
-
-  ctx.strokeStyle = PALETTE.cream
-  ctx.lineWidth = lineWidth
-  ctx.lineCap = 'square'
-
-  const bracket = (x: number, y: number, dx: number, dy: number) => {
-    ctx.beginPath()
-    ctx.moveTo(x + dx * length, y)
-    ctx.lineTo(x, y)
-    ctx.lineTo(x, y + dy * length)
-    ctx.stroke()
+function drawPlate(
+  ctx: CanvasRenderingContext2D,
+  assets: RenderAssets,
+  frame: PfpFrameDefinition,
+): void {
+  const plate = assets.art.get(frame.platePath)
+  if (plate) {
+    ctx.drawImage(plate, 0, 0, L.canvas.width, L.canvas.height)
+    return
   }
 
-  bracket(inset, inset, 1, 1)
-  bracket(right, inset, -1, 1)
+  // Recording tests and a failed-asset fallback still get an opaque export.
+  fillRect(ctx, { x: 0, y: 0, ...L.canvas }, PALETTE['green-900'])
 }
 
-/**
- * The square export treats the photo like a music-poster cover: bold frame,
- * clipped ticker and tropical marks, while leaving the face-safe centre clear.
- */
-export function drawPfp(target: RenderTarget, model: RenderModel): void {
+function drawPlaqueText(ctx: CanvasRenderingContext2D, frame: PfpFrameDefinition): void {
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'alphabetic'
+  ctx.fillStyle = frame.ink
+
+  ctx.font = `${L.topTitle.fontWeight} ${L.topTitle.fontSize}px ${L.topTitle.fontFamily}`
+  ctx.letterSpacing = `${L.topTitle.letterSpacing}px`
+  ctx.fillText(L.topTitle.text, L.topTitle.centreX, frame.headerBaselineY)
+
+  ctx.font = `${L.topKicker.fontWeight} ${L.topKicker.fontSize}px ${L.topKicker.fontFamily}`
+  ctx.letterSpacing = `${L.topKicker.letterSpacing}px`
+  ctx.fillText(L.topKicker.text, L.topKicker.centreX, frame.headerBaselineY + 36)
+
+  ctx.fillStyle = frame.accent
+  ctx.font = `${L.tag.fontWeight} ${frame.id === 'heritage' ? 20 : 23}px ${L.tag.fontFamily}`
+  ctx.letterSpacing = `${L.tag.letterSpacing}px`
+  ctx.fillText(
+    frame.id === 'heritage' ? L.tag.text : 'HH GOA 2026 · #FrameInGoa',
+    L.tag.centreX,
+    frame.footerBaselineY,
+  )
+  ctx.letterSpacing = '0px'
+  ctx.textAlign = 'left'
+}
+
+function drawPhoto(
+  ctx: CanvasRenderingContext2D,
+  model: RenderModel,
+  frame: PfpFrameDefinition,
+): void {
+  const src = cropToSourceRect(model.crop, model.image)
+  const aperture = frame.aperture
+
+  ctx.save()
+  if (aperture.shape === 'circle') {
+    ctx.beginPath()
+    ctx.arc(aperture.centreX, aperture.centreY, aperture.radius, 0, Math.PI * 2)
+    ctx.clip()
+    ctx.drawImage(
+      model.image.source,
+      src.sx,
+      src.sy,
+      src.sw,
+      src.sh,
+      aperture.centreX - aperture.radius,
+      aperture.centreY - aperture.radius,
+      aperture.radius * 2,
+      aperture.radius * 2,
+    )
+  } else {
+    roundedRectPath(ctx, aperture, aperture.radius)
+    ctx.clip()
+    ctx.drawImage(
+      model.image.source,
+      src.sx,
+      src.sy,
+      src.sw,
+      src.sh,
+      aperture.x,
+      aperture.y,
+      aperture.width,
+      aperture.height,
+    )
+  }
+  ctx.restore()
+
+  if (aperture.shape === 'circle') {
+    ctx.beginPath()
+    ctx.arc(aperture.centreX, aperture.centreY, aperture.radius, 0, Math.PI * 2)
+  } else {
+    roundedRectPath(ctx, aperture, aperture.radius)
+  }
+  ctx.strokeStyle = frame.id === 'heritage' ? '#6c391c' : frame.accent
+  ctx.lineWidth = aperture.borderWidth
+  ctx.stroke()
+}
+
+/** Vintage Goa portal PFP: generated illustration + deterministic photo/text. */
+export function drawPfp(
+  target: RenderTarget,
+  model: RenderModel,
+  assets: RenderAssets,
+): void {
   const { ctx } = target
+  const frame = frameById(model.pfpFrame)
 
   fillRect(ctx, { x: 0, y: 0, ...L.canvas }, PALETTE['green-900'])
-
-  const src = cropToSourceRect(model.crop, model.image)
-  ctx.drawImage(
-    model.image.source,
-    src.sx,
-    src.sy,
-    src.sw,
-    src.sh,
-    L.photo.x,
-    L.photo.y,
-    L.photo.width,
-    L.photo.height,
-  )
-
-  drawCornerBrackets(ctx)
-  drawHalftone(
-    ctx,
-    L.halftone.x,
-    L.halftone.y,
-    L.halftone.columns,
-    L.halftone.rows,
-    L.halftone.gap,
-    L.halftone.radius,
-    PALETTE.yellow,
-  )
-
-  drawChip(ctx, L.ticker, 3, PALETTE.yellow, PALETTE.ink, L.ticker.borderWidth)
-  ctx.textBaseline = 'alphabetic'
-  ctx.textAlign = 'left'
-  ctx.fillStyle = PALETTE.ink
-  ctx.font = `${L.tickerTop.fontWeight} ${L.tickerTop.fontSize}px ${L.tickerTop.fontFamily}`
-  ctx.letterSpacing = `${L.tickerTop.letterSpacing}px`
-  ctx.fillText(L.tickerTop.text, L.tickerTop.x, L.tickerTop.baselineY)
-  ctx.font = `${L.tickerMain.fontWeight} ${L.tickerMain.fontSize}px ${L.tickerMain.fontFamily}`
-  ctx.letterSpacing = `${L.tickerMain.letterSpacing}px`
-  ctx.fillText(L.tickerMain.text, L.tickerMain.x, L.tickerMain.baselineY)
-
-  drawScrim(ctx, L.scrim, 'rgba(5, 34, 26, 0)', PALETTE['green-900'])
-  fillRect(ctx, L.bar, PALETTE['green-900'])
-  fillRect(
-    ctx,
-    { x: L.bar.x, y: L.bar.y, width: L.bar.width, height: L.bar.ruleWidth },
-    PALETTE.yellow,
-  )
-
-  drawWaveLines(
-    ctx,
-    L.waves.x,
-    L.waves.y,
-    L.waves.width,
-    L.waves.rows,
-    L.waves.rowGap,
-    L.waves.amplitude,
-    L.waves.segments,
-    PALETTE['green-600'],
-    L.waves.lineWidth,
-  )
-
-  ctx.fillStyle = PALETTE.cream
-  ctx.font = `${L.eventLine.fontWeight} ${L.eventLine.fontSize}px ${L.eventLine.fontFamily}`
-  ctx.letterSpacing = `${L.eventLine.letterSpacing}px`
-  ctx.fillText(L.eventLine.text, L.eventLine.x, L.eventLine.baselineY)
-
-  ctx.textAlign = 'right'
-  ctx.fillStyle = PALETTE.yellow
-  ctx.font = `${L.tag.fontWeight} ${L.tag.fontSize}px ${L.tag.fontFamily}`
-  ctx.letterSpacing = `${L.tag.letterSpacing}px`
-  ctx.fillText(L.tag.text, L.tag.rightX, L.tag.baselineY)
-
-  ctx.textAlign = 'left'
-  ctx.font = `${L.yearLine.fontWeight} ${L.yearLine.fontSize}px ${L.yearLine.fontFamily}`
-  ctx.letterSpacing = `${L.yearLine.letterSpacing}px`
-  ctx.lineWidth = L.yearLine.strokeWidth
-  ctx.strokeStyle = PALETTE.ink
-  ctx.fillStyle = PALETTE.pink
-  ctx.strokeText(L.yearLine.text, L.yearLine.x, L.yearLine.baselineY)
-  ctx.fillText(L.yearLine.text, L.yearLine.x, L.yearLine.baselineY)
-
-  ctx.fillStyle = PALETTE['cream-dim']
-  ctx.font = `${L.microLine.fontWeight} ${L.microLine.fontSize}px ${L.microLine.fontFamily}`
-  ctx.letterSpacing = `${L.microLine.letterSpacing}px`
-  ctx.fillText(L.microLine.text, L.microLine.x, L.microLine.baselineY)
-  ctx.letterSpacing = '0px'
-
-  drawSunMark(
-    ctx,
-    L.sun.centreX,
-    L.sun.centreY,
-    L.sun.radius,
-    L.sun.rayLength,
-    L.sun.rayCount,
-    PALETTE.yellow,
-    PALETTE.ink,
-    L.sun.strokeWidth,
-  )
-
-  for (const sparkle of L.sparkles) {
-    drawSparkle(ctx, sparkle.x, sparkle.y, sparkle.radius, PALETTE.pink)
-  }
-
-  strokeInset(
-    ctx,
-    {
-      x: L.keyline.innerInset,
-      y: L.keyline.innerInset,
-      width: L.canvas.width - L.keyline.innerInset * 2,
-      height: L.canvas.height - L.keyline.innerInset * 2,
-    },
-    L.keyline.innerWidth,
-    PALETTE.yellow,
-  )
-  strokeInset(ctx, { x: 0, y: 0, ...L.canvas }, L.keyline.width, PALETTE.ink)
+  drawPlate(ctx, assets, frame)
+  drawPhoto(ctx, model, frame)
+  drawPlaqueText(ctx, frame)
 }

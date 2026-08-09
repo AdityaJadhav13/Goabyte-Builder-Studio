@@ -38,8 +38,9 @@ export const FONT_STACK = {
  */
 export const REQUIRED_FACES: readonly string[] = [
   `400 64px "${FONT_DISPLAY}"`,
-  `500 32px "${FONT_TEXT}"`,
   `700 32px "${FONT_TEXT}"`,
+  `750 32px "${FONT_TEXT}"`,
+  `800 32px "${FONT_TEXT}"`,
 ]
 
 let readyOnce: Promise<void> | null = null

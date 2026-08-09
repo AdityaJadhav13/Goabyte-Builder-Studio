@@ -23,9 +23,10 @@ import { isEditing, type PreparationStage } from '../editor-state'
  * means the download overlaps decoding and the user never sees a second
  * loading state.
  */
-const loadWorkspace = () => import('./EditorWorkspace').then((m) => m.EditorWorkspace)
-
-const EditorWorkspace = dynamic(loadWorkspace, { ssr: false })
+const EditorWorkspace = dynamic(
+  () => import('./EditorWorkspace').then((m) => m.EditorWorkspace),
+  { ssr: false },
+)
 
 const STAGE_COPY: Record<PreparationStage, string> = {
   validating: 'Checking your photo…',
@@ -43,11 +44,15 @@ export function EditorShell({
    *  on mount, skipping the idle dropzone. */
   readonly initialFile?: File
   /**
-   * Name and role captured on the landing form. Without this they were
+   * Name, role and team captured on the landing form. Without this they were
    * collected and then silently discarded — the user typed them, then landed
    * in the editor with empty fields and had to type them again.
    */
-  readonly initialFields?: { readonly name: string; readonly role: string }
+  readonly initialFields?: {
+    readonly name: string
+    readonly role: string
+    readonly team: string
+  }
   /** Leave the editor and restore the actual landing page. */
   readonly onReturnHome?: () => void
 }) {
@@ -76,17 +81,18 @@ export function EditorShell({
   const initialFieldsApplied = useRef(false)
   useEffect(() => {
     if (!editingNow || initialFieldsApplied.current) return
-    if (!initialFields?.name && !initialFields?.role) return
+    if (!initialFields?.name && !initialFields?.role && !initialFields?.team) return
     initialFieldsApplied.current = true
-    editor.setFields({ name: initialFields.name, role: initialFields.role })
+    editor.setFields({
+      name: initialFields.name,
+      role: initialFields.role,
+      team: initialFields.team,
+    })
+    if (initialFields.team.trim()) {
+      editor.setCrewFields({ teamName: initialFields.team })
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editingNow, initialFields])
-
-  // Fetch the workspace chunk while the photo is still decoding, so it is
-  // already resident by the time the editing phase renders.
-  useEffect(() => {
-    if (preparing) void loadWorkspace()
-  }, [preparing])
 
   return (
     <div className="space-y-8">

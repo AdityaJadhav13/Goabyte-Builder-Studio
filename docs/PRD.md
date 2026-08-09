@@ -25,7 +25,7 @@ Anyone applying to, attending, or rooting for Hacker House Goa 2026. Overwhelmin
 
 ### 1.3 Goal
 
-A visitor turns a photo from their camera roll into an on-brand HH Goa 2026 graphic — either a profile-picture frame or a Builder ID card — downloads it as a real PNG, and posts it to X with `#FrameInGoa`. One pass, no login, under thirty seconds, works the first time on a stranger's iPhone.
+A visitor turns photos from their camera roll into an on-brand HH Goa 2026 profile frame, Builder ID, or 1–4 person Crew Frame, then downloads or shares a real PNG with `#FrameInGoa`. One pass, no login, and no upload of user photos.
 
 ### 1.4 Why this matters for HH Goa
 
@@ -59,6 +59,7 @@ The submission succeeds if all of the following are true on 13 August:
 | S0-4  | Crop / zoom / reposition                                | `react-easy-crop`, per-format aspect                      |
 | S0-5  | PFP generation — 1080×1080 PNG                          | Format A                                                  |
 | S0-6  | Builder ID generation — 1080×1350 PNG                   | Format B                                                  |
+| S0-13 | Crew Frame generation — 2048×1362 PNG                   | Format C, one to four builders                            |
 | S0-7  | Live preview that matches the export exactly            | Same renderer, different scale                            |
 | S0-8  | Download a real image file                              | Not a data-URL-in-a-tab                                   |
 | S0-9  | Share to X with `#FrameInGoa` guaranteed present        | Native file share on mobile, intent + download on desktop |
@@ -72,7 +73,7 @@ The submission succeeds if all of the following are true on 13 August:
 | ---- | --------------------------------------------------------------------- | ----------------------------------------------------------------- |
 | S1-1 | Builder-title picker with a deterministic smart default               | Turns a form into a moment of delight; costs ~3 hours             |
 | S1-2 | Upward-biased smart default crop                                      | Most users will never touch the cropper; the default must be good |
-| S1-3 | Two PFP frame variants + two card colourways                          | Ownership over the output without a settings panel                |
+| S1-3 | Three selectable original PFP frame treatments                        | Ownership over the output without a settings panel                |
 | S1-4 | Three share-copy variants, one default                                | Avoids fifty identical posts in the timeline                      |
 | S1-5 | Purposeful motion (Framer Motion), `prefers-reduced-motion` respected | Premium feel; strictly subtle                                     |
 | S1-6 | Static, hand-designed OG image for the landing page                   | Every shared link looks intentional                               |
@@ -224,16 +225,17 @@ The caption always contains `#FrameInGoa`. We never say the image is attached un
 ### Builder ID rendering
 
 - **FR-025** Export Builder ID at exactly **1080×1350 px** (4:5), PNG.
-- **FR-026** Render photo, name, role/stack, builder title, and HH Goa 2026 identity per the design spec.
-- **FR-027** Keep critical identity content — photo, name, role — inside a conservative central safe region with sufficient edge margin to survive UI overlays, repost and embed contexts, thumbnail treatments, and future changes to platform presentation. The safe region is defined once in the card layout config as an inset, not derived from any single platform's current crop behaviour.
+- **FR-026** Render photo, name, role/stack, team name, optional builder title, and HH Goa 2026 identity per the design spec.
+- **FR-027** Keep critical identity content — photo, name, role and team — inside a conservative central safe region with sufficient edge margin to survive UI overlays, repost and embed contexts, thumbnail treatments, and future changes to platform presentation. The safe region is defined once in the card layout config as an inset, not derived from any single platform's current crop behaviour.
 - **FR-028** Auto-fit name: shrink font from the design size down to a documented floor, then wrap to a maximum of 2 lines, then ellipsis.
-- **FR-029** Auto-fit role and title with the same mechanism and their own documented floors and line limits.
+- **FR-029** Auto-fit role, team and title with the same mechanism and their own documented floors and line limits.
 - **FR-030** Render Unicode correctly — Devanagari, accented Latin, and emoji must not produce tofu or clipping.
 
 ### Form
 
 - **FR-031** Name: required, trimmed, 1–32 characters after trim, any Unicode. Whitespace-only is rejected.
 - **FR-032** Role / stack: required, trimmed, 1–40 characters.
+- **FR-032a** Team name: required for Builder ID, trimmed, 1–32 characters; defaults to GoaByte and remains editable.
 - **FR-033** Builder title: optional, trimmed, 0–28 characters, prefilled with a deterministic suggestion.
 - **FR-034** The default builder title is derived deterministically from the name so it never changes between preview and export.
 - **FR-035** A shuffle control offers alternative titles; the chosen value is then fixed in state.

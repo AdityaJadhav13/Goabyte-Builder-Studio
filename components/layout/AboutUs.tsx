@@ -54,16 +54,6 @@ export function AboutUs() {
             was made for the Hacker House Goa 2026 open trial—and every image stays
             private on your device.
           </p>
-
-          <a
-            href="https://github.com/AdityaJadhav13/Goabyte-Builder-Studio"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="about-repo-link"
-          >
-            Explore the build
-            <span aria-hidden="true">↗</span>
-          </a>
         </div>
 
         <div className="about-team" aria-label="GoaByte team members">

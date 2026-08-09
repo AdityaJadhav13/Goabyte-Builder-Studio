@@ -5,6 +5,16 @@ import { dirname } from 'node:path'
 const nextConfig: NextConfig = {
   reactStrictMode: true,
 
+  // `next dev` and `next build` must never write into the same directory at
+  // the same time. A production build used to replace chunks underneath a
+  // running dev server, leaving its Webpack manifest pointing at files such as
+  // `.next/server/237.js` that had moved to `.next/server/chunks/237.js`. The
+  // resulting mixed runtime fails with "Cannot read properties of undefined
+  // (reading 'call')" until the cache is deleted. Separate outputs make that
+  // invalid state impossible while preserving Next/Vercel's normal production
+  // `.next` directory.
+  distDir: process.env.NODE_ENV === 'development' ? '.next-dev' : '.next',
+
   // An unrelated package.json in the developer's home directory was being
   // inferred as the workspace root, which produces wrong file tracing. Pin the
   // root to this repository.

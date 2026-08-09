@@ -22,6 +22,7 @@ import type { BuilderFields } from '@/features/render/types'
 
 const MAX_NAME = 32
 const MAX_ROLE = 40
+const MAX_TEAM = 32
 const MAX_TITLE = 28
 
 const schema = z.object({
@@ -35,6 +36,11 @@ const schema = z.object({
     .trim()
     .min(1, 'Add what you build — a Builder ID without it is half a card.')
     .max(MAX_ROLE, `Keep it under ${MAX_ROLE} characters so it fits the card.`),
+  team: z
+    .string()
+    .trim()
+    .min(1, 'Add your team name so the Builder ID is complete.')
+    .max(MAX_TEAM, `Keep it under ${MAX_TEAM} characters so it fits the card.`),
   title: z.string().trim().max(MAX_TITLE),
 })
 
@@ -59,6 +65,7 @@ export function BuilderFieldsForm({
     defaultValues: {
       name: fields.name,
       role: fields.role,
+      team: fields.team,
       title: fields.title ?? '',
     },
   })
@@ -75,11 +82,12 @@ export function BuilderFieldsForm({
       onChange({
         name: values.name,
         role: values.role,
+        team: values.team,
         title: values.title.trim() === '' ? null : values.title.trim(),
       })
     }, 160)
     return () => clearTimeout(timer)
-  }, [values.name, values.role, values.title, onChange])
+  }, [values.name, values.role, values.team, values.title, onChange])
 
   /**
    * Offer a deterministic suggestion once there is a name to seed it from.
@@ -107,6 +115,16 @@ export function BuilderFieldsForm({
         error={errors.role?.message}
         maxLength={MAX_ROLE}
         placeholder="Backend · Architecture"
+        disabled={disabled}
+      />
+
+      <TextField
+        label="Team name"
+        value={values.team}
+        onChange={(v) => setValue('team', v, { shouldValidate: true })}
+        error={errors.team?.message}
+        maxLength={MAX_TEAM}
+        placeholder="GoaByte"
         disabled={disabled}
       />
 

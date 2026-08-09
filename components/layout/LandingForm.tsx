@@ -34,7 +34,12 @@ function cameraErrorCopy(cause: unknown): string {
 export function LandingForm({
   onSubmit,
 }: {
-  readonly onSubmit: (data: { file: File; name: string; role: string }) => void
+  readonly onSubmit: (data: {
+    file: File
+    name: string
+    role: string
+    team: string
+  }) => void
 }) {
   const fileInputId = useId()
   const cameraInputId = useId()
@@ -50,6 +55,7 @@ export function LandingForm({
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null)
   const [name, setName] = useState('')
   const [role, setRole] = useState('')
+  const [team, setTeam] = useState('GoaByte')
   const [isDragActive, setDragActive] = useState(false)
   const [cameraOpen, setCameraOpen] = useState(false)
   const [cameraStarting, setCameraStarting] = useState(false)
@@ -76,8 +82,8 @@ export function LandingForm({
 
   const handleSubmit = useCallback(() => {
     if (!photo) return
-    onSubmit({ file: photo, name, role })
-  }, [photo, name, role, onSubmit])
+    onSubmit({ file: photo, name, role, team })
+  }, [photo, name, role, team, onSubmit])
 
   const closeCamera = useCallback(() => {
     cameraRequestIdRef.current += 1
@@ -174,8 +180,8 @@ export function LandingForm({
     <div className="form-card animate-fade-up animate-delay-3">
       <div className="form-output-proof">
         <div>
-          <p className="form-section-label">Two ready-to-post formats</p>
-          <p className="form-helper">Profile picture and Builder ID, both as PNG.</p>
+          <p className="form-section-label">Three ready-to-post formats</p>
+          <p className="form-helper">Profile picture, Crew Frame and Builder ID.</p>
         </div>
         <FormatShowcase />
       </div>
@@ -334,6 +340,21 @@ export function LandingForm({
               value={role}
               onChange={(event) => setRole(event.target.value)}
               maxLength={40}
+            />
+          </div>
+
+          <div className="builder-team-field">
+            <label htmlFor="landing-team" className="form-field-label">
+              Team name
+            </label>
+            <input
+              id="landing-team"
+              type="text"
+              className="form-input"
+              placeholder="Your team"
+              value={team}
+              onChange={(event) => setTeam(event.target.value)}
+              maxLength={32}
             />
           </div>
         </div>

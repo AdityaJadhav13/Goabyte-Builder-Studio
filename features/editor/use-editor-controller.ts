@@ -1,14 +1,18 @@
 'use client'
 
-import { useCallback, useMemo, useReducer, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react'
 import { prepareRenderAssets } from '@/features/render/assets'
 import {
   aspectOf,
+  DEFAULT_PFP_FRAME,
   DESIGN,
   OUTPUT_FORMATS,
   type BuilderFields,
+  type CrewFields,
   type OutputFormat,
+  type PfpFrameId,
 } from '@/features/render/types'
+import { BUILDER_STUDIO_QR_URL } from '@/lib/qr/qr-matrix'
 import { saveBlob } from '@/features/export/download'
 import { validateDecodedImage } from '@/features/upload/validate-decoded-image'
 import { validateRawFile } from '@/features/upload/validate-file'
@@ -47,7 +51,12 @@ import {
 
 const DEFAULT_FORMAT: OutputFormat = 'pfp'
 
-const EMPTY_FIELDS: BuilderFields = { name: '', role: '', title: null }
+const EMPTY_FIELDS: BuilderFields = { name: '', role: '', team: 'GoaByte', title: null }
+const EMPTY_CREW: CrewFields = {
+  teamName: 'GoaByte',
+  projectUrl: BUILDER_STUDIO_QR_URL,
+  members: [],
+}
 
 /**
  * Floor on how long the preparing phase stays visible.
@@ -78,7 +87,8 @@ function ownedExport(exported: ExportedGraphic): ExportedGraphic & Releasable {
 }
 
 function framesFor(image: NormalizedImage): Record<OutputFormat, CropRect> {
-  // One frame per format: the PFP frames a square, the card a 5:4 well.
+  // One remembered square portal frame per format. Separate entries preserve
+  // each format's zoom/position while users switch between outputs.
   return Object.fromEntries(
     OUTPUT_FORMATS.map((format) => [
       format,
@@ -91,8 +101,18 @@ export interface EditorController {
   readonly state: EditorState
   selectFile(file: File): void
   setFormat(format: OutputFormat): void
+  setPfpFrame(frame: PfpFrameId): void
   setCrop(format: OutputFormat, crop: CropRect): void
   setFields(fields: Partial<BuilderFields>): void
+  setCrewFields(fields: Partial<Pick<CrewFields, 'teamName' | 'projectUrl'>>): void
+  addCrewMember(
+    file: File,
+  ): Promise<{ readonly ok: true } | { readonly ok: false; readonly message: string }>
+  setCrewMember(
+    id: string,
+    fields: { readonly name?: string; readonly role?: string },
+  ): void
+  removeCrewMember(id: string): void
   download(): void
   startOver(): void
 }
@@ -112,6 +132,17 @@ export function useEditorController(): EditorController {
    * file mid-decode can never leak the first or publish a stale image.
    */
   const runIdRef = useRef(0)
+  const crewRunRef = useRef(0)
+  const crewIdRef = useRef(0)
+  const crewImagesRef = useRef(new Map<string, NormalizedImage>())
+
+  const releaseCrewImages = useCallback(() => {
+    crewRunRef.current++
+    crewImagesRef.current.forEach((image) => image.release())
+    crewImagesRef.current.clear()
+  }, [])
+
+  useEffect(() => releaseCrewImages, [releaseCrewImages])
 
   const failPipeline = useCallback(
     (error: AppError) => {
@@ -124,6 +155,7 @@ export function useEditorController(): EditorController {
 
   const selectFile = useCallback(
     (file: File) => {
+      releaseCrewImages()
       const runId = ++runIdRef.current
       const startedAt = performance.now()
       const isStale = () => runId !== runIdRef.current
@@ -212,6 +244,8 @@ export function useEditorController(): EditorController {
             crops,
             quality: decodedResult.value.quality === 'soft' ? 'soft' : quality,
             fields: EMPTY_FIELDS,
+            pfpFrame: DEFAULT_PFP_FRAME,
+            crew: EMPTY_CREW,
           })
         } catch (cause) {
           if (isStale()) return
@@ -219,7 +253,7 @@ export function useEditorController(): EditorController {
         }
       })()
     },
-    [failPipeline, imageSlot, exportSlot],
+    [failPipeline, imageSlot, exportSlot, releaseCrewImages],
   )
 
   const setFormat = useCallback(
@@ -240,6 +274,102 @@ export function useEditorController(): EditorController {
     [exportSlot],
   )
 
+  const setPfpFrame = useCallback(
+    (frame: PfpFrameId) => {
+      exportSlot.get().adopt(null)
+      dispatch({ type: 'pfp-frame-changed', frame })
+    },
+    [exportSlot],
+  )
+
+  const setCrewFields = useCallback(
+    (fields: Partial<Pick<CrewFields, 'teamName' | 'projectUrl'>>) => {
+      exportSlot.get().adopt(null)
+      dispatch({ type: 'crew-fields-changed', fields })
+    },
+    [exportSlot],
+  )
+
+  const addCrewMember = useCallback(
+    async (file: File): Promise<{ ok: true } | { ok: false; message: string }> => {
+      if (!isEditing(state) || state.crew.members.length >= 3) {
+        return { ok: false, message: 'A Crew Frame can include up to four builders.' }
+      }
+
+      const generation = crewRunRef.current
+      try {
+        const rawResult = await validateRawFile(file)
+        if (!rawResult.ok) return { ok: false, message: rawResult.error.userMessage }
+
+        const decoded = await decodeImage(file)
+        if (generation !== crewRunRef.current) {
+          decoded.close()
+          return {
+            ok: false,
+            message: 'That crew photo was replaced before it finished.',
+          }
+        }
+        const decodedResult = validateDecodedImage(decoded.width, decoded.height)
+        if (!decodedResult.ok) {
+          decoded.close()
+          return { ok: false, message: decodedResult.error.userMessage }
+        }
+
+        let image: NormalizedImage
+        try {
+          image = normalizeImage(decoded, file)
+        } catch (cause) {
+          decoded.close()
+          throw cause
+        }
+        if (generation !== crewRunRef.current) {
+          image.release()
+          return {
+            ok: false,
+            message: 'That crew photo was replaced before it finished.',
+          }
+        }
+
+        const id = `crew-${++crewIdRef.current}`
+        crewImagesRef.current.set(id, image)
+        exportSlot.get().adopt(null)
+        dispatch({
+          type: 'crew-member-added',
+          member: {
+            id,
+            name: `Crew member ${state.crew.members.length + 2}`,
+            role: 'Builder',
+            image,
+            crop: autoFrame(image.width, image.height, 1),
+          },
+        })
+        return { ok: true }
+      } catch (cause) {
+        const error = isAppError(cause) ? cause : appError('DECODE_FAILED', { cause })
+        return { ok: false, message: error.userMessage }
+      }
+    },
+    [state, exportSlot],
+  )
+
+  const setCrewMember = useCallback(
+    (id: string, fields: { readonly name?: string; readonly role?: string }) => {
+      exportSlot.get().adopt(null)
+      dispatch({ type: 'crew-member-changed', id, fields })
+    },
+    [exportSlot],
+  )
+
+  const removeCrewMember = useCallback(
+    (id: string) => {
+      crewImagesRef.current.get(id)?.release()
+      crewImagesRef.current.delete(id)
+      exportSlot.get().adopt(null)
+      dispatch({ type: 'crew-member-removed', id })
+    },
+    [exportSlot],
+  )
+
   const setCrop = useCallback(
     (format: OutputFormat, crop: CropRect) => {
       exportSlot.get().adopt(null)
@@ -256,10 +386,17 @@ export function useEditorController(): EditorController {
       format,
       image,
       crop: state.crops[format],
-      fields: format === 'builder-card' ? fields : null,
+      fields: format === 'pfp' ? null : fields,
+      pfpFrame: state.pfpFrame,
+      crew: format === 'crew' ? state.crew : null,
     }
     // The card is titled by name; the PFP has no name to use.
-    const subject = format === 'builder-card' ? fields.name : null
+    const subject =
+      format === 'builder-card'
+        ? fields.name
+        : format === 'crew'
+          ? state.crew.teamName
+          : null
 
     dispatch({ type: 'export-started' })
     void (async () => {
@@ -291,13 +428,40 @@ export function useEditorController(): EditorController {
   const startOver = useCallback(() => {
     // Invalidate any in-flight run so its result is released, not adopted.
     runIdRef.current++
+    releaseCrewImages()
     imageSlot.get().adopt(null)
     exportSlot.get().adopt(null)
     dispatch({ type: 'start-over' })
-  }, [imageSlot, exportSlot])
+  }, [imageSlot, exportSlot, releaseCrewImages])
 
   return useMemo(
-    () => ({ state, selectFile, setFormat, setCrop, setFields, download, startOver }),
-    [state, selectFile, setFormat, setCrop, setFields, download, startOver],
+    () => ({
+      state,
+      selectFile,
+      setFormat,
+      setPfpFrame,
+      setCrop,
+      setFields,
+      setCrewFields,
+      addCrewMember,
+      setCrewMember,
+      removeCrewMember,
+      download,
+      startOver,
+    }),
+    [
+      state,
+      selectFile,
+      setFormat,
+      setPfpFrame,
+      setCrop,
+      setFields,
+      setCrewFields,
+      addCrewMember,
+      setCrewMember,
+      removeCrewMember,
+      download,
+      startOver,
+    ],
   )
 }

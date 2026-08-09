@@ -40,9 +40,12 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
         crops: {
           pfp: clampCrop(action.crops.pfp),
           'builder-card': clampCrop(action.crops['builder-card']),
+          crew: clampCrop(action.crops.crew),
         },
+        pfpFrame: action.pfpFrame,
         quality: action.quality,
         fields: action.fields,
+        crew: action.crew,
         isExporting: false,
         exportError: null,
         exported: null,
@@ -54,6 +57,10 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
       // Keeping it would let the share panel offer a PFP while the preview
       // shows a card. The controller revokes its object URL.
       return { ...state, format: action.format, exported: null, exportError: null }
+
+    case 'pfp-frame-changed':
+      if (state.phase !== 'editing' || state.pfpFrame === action.frame) return state
+      return { ...state, pfpFrame: action.frame, exported: null, exportError: null }
 
     case 'crop-changed':
       if (state.phase !== 'editing') return state
@@ -70,6 +77,50 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
       // Editing a field invalidates any export made before the edit.
       return { ...state, fields, exported: null }
     }
+
+    case 'crew-fields-changed':
+      if (state.phase !== 'editing') return state
+      return {
+        ...state,
+        crew: { ...state.crew, ...action.fields },
+        exported: null,
+        exportError: null,
+      }
+
+    case 'crew-member-added':
+      if (state.phase !== 'editing' || state.crew.members.length >= 3) return state
+      return {
+        ...state,
+        crew: { ...state.crew, members: [...state.crew.members, action.member] },
+        exported: null,
+        exportError: null,
+      }
+
+    case 'crew-member-changed':
+      if (state.phase !== 'editing') return state
+      return {
+        ...state,
+        crew: {
+          ...state.crew,
+          members: state.crew.members.map((member) =>
+            member.id === action.id ? { ...member, ...action.fields } : member,
+          ),
+        },
+        exported: null,
+        exportError: null,
+      }
+
+    case 'crew-member-removed':
+      if (state.phase !== 'editing') return state
+      return {
+        ...state,
+        crew: {
+          ...state.crew,
+          members: state.crew.members.filter((member) => member.id !== action.id),
+        },
+        exported: null,
+        exportError: null,
+      }
 
     case 'export-started':
       // Ignoring the action while an export is in flight is what makes

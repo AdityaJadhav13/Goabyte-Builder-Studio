@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildIntentUrl,
+  captionForFormat,
   DEFAULT_CAPTION,
   REQUIRED_HASHTAG,
   SHARE_CAPTIONS,
+  X_POST_CHARACTER_LIMIT,
 } from '@/features/share/share-copy'
 
 /**
@@ -17,6 +19,14 @@ describe('share captions always carry #FrameInGoa', () => {
 
   it.each(SHARE_CAPTIONS)('variant contains it verbatim: %s', (caption) => {
     expect(caption).toContain('#FrameInGoa')
+  })
+
+  it.each(SHARE_CAPTIONS)('variant contains the hashtag exactly once: %s', (caption) => {
+    expect(caption.match(/#FrameInGoa/gu)).toHaveLength(1)
+  })
+
+  it.each(SHARE_CAPTIONS)('variant stays inside the X post limit: %s', (caption) => {
+    expect(Array.from(caption).length).toBeLessThanOrEqual(X_POST_CHARACTER_LIMIT)
   })
 
   it('offers more than one variant so timelines are not identical (S1-4)', () => {
@@ -34,6 +44,22 @@ describe('share captions always carry #FrameInGoa', () => {
       expect(caption).not.toContain('#frameingoa')
       expect(caption).not.toContain('#FrameinGoa')
     }
+  })
+
+  it('uses copy that matches the exported format', () => {
+    const pfp = captionForFormat('pfp')
+    const builder = captionForFormat('builder-card')
+    const crew = captionForFormat('crew')
+
+    expect(pfp).toContain('profile picture')
+    expect(builder).toContain('Builder ID')
+    expect(crew).toContain('crew')
+    expect(pfp).not.toBe(builder)
+    expect(crew).not.toBe(pfp)
+    expect(crew).not.toBe(builder)
+    expect(pfp.match(/#FrameInGoa/gu)).toHaveLength(1)
+    expect(builder.match(/#FrameInGoa/gu)).toHaveLength(1)
+    expect(crew.match(/#FrameInGoa/gu)).toHaveLength(1)
   })
 })
 

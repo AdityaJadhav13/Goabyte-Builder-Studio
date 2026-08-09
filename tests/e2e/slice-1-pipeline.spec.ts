@@ -51,6 +51,9 @@ async function expectEditorReady(page: Page) {
   })
 }
 
+/** The always-visible share panel also offers Download PNG once prepared. */
+const primaryDownload = (page: Page) => page.locator('.editor-download-button')
+
 test.beforeEach(async ({ page }) => {
   const errors: string[] = []
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
@@ -79,6 +82,49 @@ test('landing shows the product and an upload control above the fold', async ({
   await expect(page.getByRole('button', { name: /take photo/i })).toBeInViewport()
 })
 
+test('Use camera requests a live stream before offering the device-picker fallback', async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const instrumentedWindow = window as typeof window & {
+      __cameraConstraints?: MediaStreamConstraints
+    }
+    Object.defineProperty(navigator, 'mediaDevices', {
+      configurable: true,
+      value: {
+        async getUserMedia(constraints: MediaStreamConstraints) {
+          instrumentedWindow.__cameraConstraints = constraints
+          throw new DOMException('Permission denied in test', 'NotAllowedError')
+        },
+      },
+    })
+  })
+  await page.reload()
+
+  await page.getByRole('button', { name: 'Take photo with camera' }).click()
+
+  const cameraDialog = page.getByRole('dialog', { name: 'Take your photo' })
+  await expect(cameraDialog).toBeVisible()
+  // Scope to the dialog: Next injects its own role="alert" route announcer
+  // into <body>, so an unscoped query matches two elements.
+  await expect(cameraDialog.getByRole('alert')).toContainText(
+    /camera permission was blocked/i,
+  )
+  await expect(page.getByRole('button', { name: 'Device camera picker' })).toBeVisible()
+  await expect(page.locator('input[type="file"][capture="user"]')).toHaveCount(1)
+
+  const constraints = await page.evaluate(
+    () =>
+      (
+        window as typeof window & {
+          __cameraConstraints?: MediaStreamConstraints
+        }
+      ).__cameraConstraints,
+  )
+  expect(constraints?.audio).toBe(false)
+  expect(constraints?.video).toMatchObject({ facingMode: { ideal: 'user' } })
+})
+
 test('full pipeline: portrait JPG → preview → 1080×1080 PNG download', async ({
   page,
 }) => {
@@ -87,7 +133,7 @@ test('full pipeline: portrait JPG → preview → 1080×1080 PNG download', asyn
 
   const download = await Promise.all([
     page.waitForEvent('download'),
-    page.getByRole('button', { name: 'Download PNG' }).click(),
+    primaryDownload(page).click(),
   ]).then(([d]) => d)
 
   expect(download.suggestedFilename()).toBe('hhgoa-2026-builder-pfp.png')
@@ -109,7 +155,7 @@ test.describe('accepted inputs all reach a renderable editor', () => {
     test(file, async ({ page }) => {
       await upload(page, file)
       await expectEditorReady(page)
-      await expect(page.getByRole('button', { name: 'Download PNG' })).toBeEnabled()
+      await expect(primaryDownload(page)).toBeEnabled()
     })
   }
 })
@@ -122,7 +168,7 @@ test('transparent PNG exports fully opaque — no transparent regions', async ({
 
   const download = await Promise.all([
     page.waitForEvent('download'),
-    page.getByRole('button', { name: 'Download PNG' }).click(),
+    primaryDownload(page).click(),
   ]).then(([d]) => d)
 
   const bytes = readFileSync(await download.path())
@@ -185,7 +231,7 @@ test('photo controls update the graphic and can reset to the automatic frame', a
   await expectEditorReady(page)
 
   // Controls are optional: the automatic result is still download-ready.
-  await expect(page.getByRole('button', { name: 'Download PNG' })).toBeEnabled()
+  await expect(primaryDownload(page)).toBeEnabled()
 
   const preview = page.getByRole('img', { name: /Preview at 1080×1080/ })
   const automatic = await preview.evaluate((canvas: HTMLCanvasElement) =>
@@ -218,30 +264,82 @@ test('photo controls update the graphic and can reset to the automatic frame', a
     .toBe(automatic)
 })
 
-test('desktop editor fits inside one viewport without page scrolling', async ({
+test('desktop editor uses normal document scrolling without a nested rail', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await upload(page, 'portrait.jpg')
   await expectEditorReady(page)
-
-  const pfpMetrics = await page.evaluate(() => ({
-    viewport: window.innerHeight,
-    page: document.documentElement.scrollHeight,
-  }))
-  expect(pfpMetrics.page).toBeLessThanOrEqual(pfpMetrics.viewport)
-
   await page.getByText('Builder ID', { exact: true }).click()
   await expect(page.getByRole('img', { name: /Preview at 1080×1350/ })).toBeVisible()
-  await expect(page.getByLabel('Your name')).toBeVisible()
-  const builderMetrics = await page.evaluate(() => ({
+  await page.getByLabel('Your name').fill('Aditya Jadhav')
+  await page.getByLabel('What you build').fill('Canvas · React')
+
+  // Sharing belongs to the editor itself, not to a post-download success
+  // screen. Its extra content also participates in ordinary document scroll.
+  const sharePanel = page.getByRole('region', { name: 'Post your build' })
+  await expect(sharePanel).toBeVisible()
+
+  const metrics = await page.evaluate(() => ({
     viewport: window.innerHeight,
     page: document.documentElement.scrollHeight,
-    railViewport: document.querySelector('.editor-control-rail')?.clientHeight ?? 0,
-    railContent: document.querySelector('.editor-control-rail')?.scrollHeight ?? 0,
+    htmlOverflow: getComputedStyle(document.documentElement).overflowY,
+    bodyOverflow: getComputedStyle(document.body).overflowY,
+    railOverflow: getComputedStyle(document.querySelector('.editor-control-rail')!)
+      .overflowY,
   }))
-  expect(builderMetrics.page).toBeLessThanOrEqual(builderMetrics.viewport)
-  expect(builderMetrics.railContent).toBeLessThanOrEqual(builderMetrics.railViewport)
+  expect(metrics.page).toBeGreaterThan(metrics.viewport)
+  expect(metrics.htmlOverflow).not.toBe('hidden')
+  expect(metrics.bodyOverflow).not.toBe('hidden')
+  expect(['auto', 'scroll']).not.toContain(metrics.railOverflow)
+
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
+  const bottom = await page.evaluate(() => {
+    const footer = document.querySelector('.editor-app-footer')!.getBoundingClientRect()
+    return { scrollY: window.scrollY, footerTop: footer.top, footerBottom: footer.bottom }
+  })
+  expect(bottom.scrollY).toBeGreaterThan(0)
+  expect(bottom.footerTop).toBeLessThan(900)
+  expect(bottom.footerBottom).toBeGreaterThan(0)
+})
+
+test('editor canvas and control surfaces are transparent over the illustrated page', async ({
+  page,
+}) => {
+  const surfaceState = async (selector: string) =>
+    page.locator(selector).evaluate((element) => {
+      const style = getComputedStyle(element)
+      return {
+        backdrop: style.backdropFilter,
+        background: style.backgroundColor,
+      }
+    })
+
+  for (const selector of ['.form-card', '.form-output-proof', '.landing-upload-zone']) {
+    const state = await surfaceState(selector)
+    expect(state.backdrop).not.toContain('blur')
+    expect(state.background).not.toBe('rgba(0, 0, 0, 0)')
+  }
+  expect(
+    await page
+      .locator('.form-card')
+      .evaluate((element) => getComputedStyle(element, '::before').display),
+  ).toBe('none')
+
+  await upload(page, 'portrait.jpg')
+  await expectEditorReady(page)
+  for (const selector of [
+    '.editor-studio',
+    '.editor-control-rail',
+    '.editor-preview-stage',
+    '.photo-adjustment-card',
+    '.editor-action-card',
+    '.editor-preview-viewport',
+  ]) {
+    const state = await surfaceState(selector)
+    expect(state.backdrop).not.toContain('blur')
+    expect(state.background).toBe('rgba(0, 0, 0, 0)')
+  }
 })
 
 test('the same photo always produces an identical graphic (NFR-035)', async ({
@@ -253,7 +351,7 @@ test('the same photo always produces an identical graphic (NFR-035)', async ({
     await expectEditorReady(page)
     const dl = await Promise.all([
       page.waitForEvent('download'),
-      page.getByRole('button', { name: 'Download PNG' }).click(),
+      primaryDownload(page).click(),
     ]).then(([d]) => d)
     sizes.push(readFileSync(await dl.path()).length)
     await page.getByRole('button', { name: 'Start over' }).click()
@@ -269,7 +367,7 @@ test('a small-but-usable photo is accepted with a soft-quality warning', async (
   await upload(page, 'small-soft.jpg')
   await expectEditorReady(page)
   await expect(page.getByText(/may look slightly soft/i)).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Download PNG' })).toBeEnabled()
+  await expect(primaryDownload(page)).toBeEnabled()
 })
 
 test('replacing the image mid-session keeps a single working editor', async ({
@@ -322,7 +420,7 @@ test('five consecutive upload → render → download cycles (S0-12)', async ({ 
 
     const download = await Promise.all([
       page.waitForEvent('download'),
-      page.getByRole('button', { name: 'Download PNG' }).click(),
+      primaryDownload(page).click(),
     ]).then(([d]) => d)
 
     expect(pngSize(readFileSync(await download.path())), `cycle ${i + 1}`).toEqual({
@@ -373,8 +471,9 @@ test('the whole flow is reachable by keyboard (NFR-015)', async ({ page }) => {
   await upload(page, 'portrait.jpg')
   await expectEditorReady(page)
 
-  await page.getByRole('button', { name: 'Download PNG' }).focus()
-  await expect(page.getByRole('button', { name: 'Download PNG' })).toBeFocused()
+  await expect(primaryDownload(page)).toBeEnabled({ timeout: 20_000 })
+  await primaryDownload(page).focus()
+  await expect(primaryDownload(page)).toBeFocused()
 })
 
 test.describe('every landing entry point uses the canonical pipeline', () => {

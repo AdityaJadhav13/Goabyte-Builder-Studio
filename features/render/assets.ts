@@ -1,6 +1,12 @@
 import { ensureFontsReady } from './fonts'
 import type { OutputFormat, RenderAssets } from './types'
 
+export const PFP_HERITAGE_PLATE_PATH = '/brand/generated/goa-pfp-plate.webp'
+export const PFP_POSTCARD_PLATE_PATH = '/brand/generated/goa-pfp-postcard.webp'
+export const PFP_MIDNIGHT_PLATE_PATH = '/brand/generated/goa-pfp-midnight.webp'
+export const BUILDER_PLATE_PATH = '/brand/generated/goa-builder-badge.webp'
+export const CREW_PLATE_PATH = '/brand/generated/goa-crew-plate.webp'
+
 /**
  * THE asset-preparation boundary.
  *
@@ -23,15 +29,23 @@ const artCache = new Map<OutputFormat, ReadonlyMap<string, ImageBitmap>>()
  * a remote asset would taint the canvas and break toBlob (FR-045), and is
  * separately forbidden by the privacy invariant (NFR-037).
  *
- * EMPTY BY DESIGN. Both production templates draw their marks with canvas
- * primitives rather than loading SVGs: the sun and the corner brackets are a
- * dozen calls each, they scale exactly with the design space, and shipping no
- * art means no asset fetch to await and no decode before every render
- * (FR-044). Add entries here only if a mark becomes genuinely illustrative.
+ * Both plates are same-origin, text-free artwork. User content, exact event
+ * copy and the QR are still painted deterministically by the canvas renderer.
+ * Loading both plates in the initial editor preparation keeps format switching
+ * synchronous: the preview can never flash a blank frame while art decodes.
  */
+const PLATES = [
+  PFP_HERITAGE_PLATE_PATH,
+  PFP_POSTCARD_PLATE_PATH,
+  PFP_MIDNIGHT_PLATE_PATH,
+  BUILDER_PLATE_PATH,
+  CREW_PLATE_PATH,
+] as const
+
 const ART_MANIFEST: Record<OutputFormat, readonly string[]> = {
-  pfp: [],
-  'builder-card': [],
+  pfp: PLATES,
+  'builder-card': PLATES,
+  crew: PLATES,
 }
 
 async function loadArt(format: OutputFormat): Promise<ReadonlyMap<string, ImageBitmap>> {

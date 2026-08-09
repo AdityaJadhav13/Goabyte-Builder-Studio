@@ -151,15 +151,16 @@ Minimum on-screen text size is **14px**. Nothing smaller ships (NFR-014, Lavitra
 
 These are **design-space units** (§6), not CSS pixels, and they become values in `*.layout.ts`.
 
-| Element            | Face        | Design size         | Floor | Max lines |
-| ------------------ | ----------- | ------------------- | ----- | --------- |
-| Card name          | Display 400 | 88                  | 56    | 2         |
-| Card role          | Text 500    | 34                  | 26    | 2         |
-| Card builder title | Text 700    | 26                  | 22    | 1         |
-| Event lockup       | Text 700    | 24, tracking 0.18em | —     | 1         |
-| PFP lockup         | Text 700    | 40, tracking 0.16em | —     | 1         |
+| Element            | Face        | Design size | Floor | Max lines |
+| ------------------ | ----------- | ----------- | ----- | --------- |
+| Card name          | Text 700    | 31          | 22    | 1         |
+| Card role          | Text 700    | 31          | 22    | 1         |
+| Card team          | Text 700    | 31          | 22    | 1         |
+| Card builder title | Text 700    | 22          | 18    | 1         |
+| Event lockup       | Display 400 | 55          | —     | 1         |
+| PFP lockup         | Display 400 | 58          | —     | 1         |
 
-Floors are the point at which `fit-text.ts` stops shrinking and starts wrapping, then truncating (FR-028, FR-029). They are set where the type stops being comfortably readable on a phone screen — below 56 the card name starts competing with the role for hierarchy, and below 26 the role becomes hard to read at timeline scale.
+Floors are the point at which `fit-text.ts` stops shrinking and starts truncating (FR-028, FR-029). The three manifest values share a 22-unit floor so Name, Stack and Team stay visually aligned inside the illustrated parchment panel.
 
 ## 5. Space, shape, depth
 
@@ -322,13 +323,14 @@ Mobile is not a compressed desktop. The 375 layout is the design; wider viewport
 
 ### 9.1 Share copy — all variants contain `#FrameInGoa`
 
-Enforced by unit test over every exported variant (FR-050). **Default is V1.**
+Enforced by unit test over every exported variant (FR-050). The default is format-aware so the post describes the exported graphic.
 
-- **V1** — `Just made my Hacker House Goa 2026 builder identity. #FrameInGoa`
-- **V2** — `Locked in for Hacker House Goa 2026. Building in Goa this October. #FrameInGoa`
-- **V3** — `New profile picture, same mission. See you in Goa. #FrameInGoa`
+- **Builder V1** — `My Hacker House Goa 2026 Builder ID is ready. Built with GoaByte Builder Studio. #FrameInGoa`
+- **Builder V2** — `Locked in for Hacker House Goa 2026. Building, connecting and shipping in Goa. #FrameInGoa`
+- **PFP V1** — `Fresh frame, Goa energy. My Hacker House Goa 2026 profile picture is ready. #FrameInGoa`
+- **PFP V2** — `New profile picture, same mission. See you at Hacker House Goa 2026. #FrameInGoa`
 
-The hashtag is appended by a single factory function so no variant can be authored without it.
+The hashtag is appended by a single factory function so no variant can be authored without it, and every result is capped at 280 code points.
 
 **The sentence that states what happened is set by SPIKE-3, not by this document.** It must match observed device behaviour (FR-055). Candidates are enumerated in `docs/spikes/SPIKE-3-WEB-SHARE.md` §9.
 

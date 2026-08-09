@@ -2,13 +2,18 @@
 
 import dynamic from 'next/dynamic'
 import { useMemo, useState } from 'react'
-import { Panel } from '@/components/layout/Panel'
 import { Button } from '@/components/ui/Button'
 import { FormatSelector } from '@/components/ui/FormatSelector'
 import { InlineError } from '@/components/ui/InlineError'
+import { saveBlob } from '@/features/export/download'
+import {
+  aspectOf,
+  DESIGN,
+  OUTPUT_FORMATS,
+  PREVIEW_MAX_WIDTH_PX,
+  type OutputFormat,
+} from '@/features/render/types'
 import { ReplacePhotoButton } from '@/features/upload/components/ReplacePhotoButton'
-import { aspectOf, DESIGN, PREVIEW_MAX_WIDTH_PX } from '@/features/render/types'
-import type { OutputFormat } from '@/features/render/types'
 import {
   DEFAULT_FRAME_CONTROLS,
   effectiveResolution,
@@ -17,22 +22,12 @@ import {
 } from '@/lib/image/crop-geometry'
 import { canExport, type EditingState } from '../editor-state'
 import type { EditorController } from '../use-editor-controller'
+import { usePreparedGraphic } from '../use-prepared-graphic'
+import { CrewFieldsPanel } from './CrewFieldsPanel'
+import { FrameSelector } from './FrameSelector'
 import { PhotoPositionControls } from './PhotoPositionControls'
 import { PreviewCanvas } from './PreviewCanvas'
 
-/**
- * Everything the user sees AFTER a photo is loaded.
- *
- * Split from EditorShell so the landing view — the only view most visitors
- * ever see, and the one LCP measures — does not carry the render layer: both
- * templates, the text-fitting engine and the drawing primitives all arrive
- * with this chunk instead (NFR-002).
- *
- * Two further modules load on demand from here:
- *   - the builder-card form (React Hook Form + Zod, ~20 kB) only matters to
- *     users who choose the card
- *   - the share panel only matters after a successful export
- */
 const BuilderFieldsForm = dynamic(
   () => import('./BuilderFieldsForm').then((m) => m.BuilderFieldsForm),
   {
@@ -46,6 +41,11 @@ const SharePanel = dynamic(
   { ssr: false },
 )
 
+const initialAdjustments = (): Record<OutputFormat, FrameControls> =>
+  Object.fromEntries(
+    OUTPUT_FORMATS.map((format) => [format, DEFAULT_FRAME_CONTROLS]),
+  ) as Record<OutputFormat, FrameControls>
+
 export function EditorWorkspace({
   state,
   editor,
@@ -55,31 +55,28 @@ export function EditorWorkspace({
   readonly editor: EditorController
   readonly onReturnHome?: () => void
 }) {
-  const { format, image, fields } = state
+  const { format, image, fields, crew, pfpFrame } = state
   const crop = state.crops[format]
-  const [adjustments, setAdjustments] = useState<Record<OutputFormat, FrameControls>>({
-    pfp: DEFAULT_FRAME_CONTROLS,
-    'builder-card': DEFAULT_FRAME_CONTROLS,
-  })
+  const [adjustments, setAdjustments] = useState(initialAdjustments)
 
-  /**
-   * Referential stability matters: PreviewCanvas repaints on model identity,
-   * so a fresh object literal every render would repaint the canvas on
-   * unrelated state changes such as the export flag toggling.
-   */
   const model = useMemo(
     () => ({
       format,
       image,
       crop,
-      fields: format === 'builder-card' ? fields : null,
+      fields: format === 'pfp' ? null : fields,
+      pfpFrame,
+      crew: format === 'crew' ? crew : null,
     }),
-    [format, image, crop, fields],
+    [format, image, crop, fields, pfpFrame, crew],
   )
 
   const { width, height } = DESIGN[format]
-  const isCard = format === 'builder-card'
+  const isBuilder = format === 'builder-card'
+  const isCrew = format === 'crew'
   const ready = canExport(state)
+  const subject = isBuilder ? fields.name : isCrew ? crew.teamName : null
+  const prepared = usePreparedGraphic(model, subject, ready)
   const quality = effectiveResolution(crop, image, DESIGN[format].width)
 
   const setPhotoAdjustment = (next: FrameControls) => {
@@ -90,26 +87,19 @@ export function EditorWorkspace({
     )
   }
 
-  // A screen-reader user cannot see the canvas, so the label has to carry what
-  // is actually on it — not just its dimensions (FR-041).
-  const description =
-    isCard && fields.name.trim()
-      ? `Builder ID card for ${fields.name.trim()}${fields.role.trim() ? `, ${fields.role.trim()}` : ''}`
-      : 'Hacker House Goa 2026 profile picture frame around your photo'
+  const description = isBuilder
+    ? `Builder ID card for ${fields.name.trim() || 'this builder'}${fields.role.trim() ? `, ${fields.role.trim()}` : ''}${fields.team.trim() ? `, team ${fields.team.trim()}` : ''}`
+    : isCrew
+      ? `Crew frame for ${crew.teamName.trim() || fields.team.trim() || 'this team'} with ${crew.members.length + 1} member${crew.members.length === 0 ? '' : 's'}`
+      : `${pfpFrame} Hacker House Goa 2026 profile picture frame around your photo`
 
   return (
-    /* Wrapped in a panel: every label, warning and helper line here would
-       otherwise sit on the illustration, where measured contrast bottoms out
-       at 1.84:1. */
-    <Panel className="editor-studio">
-      <div className="editor-studio-orb editor-studio-orb--one" aria-hidden="true" />
-      <div className="editor-studio-orb editor-studio-orb--two" aria-hidden="true" />
-
+    <section className="editor-studio" aria-label="Creative control room">
       <div className="editor-format-deck">
         <div className="editor-format-intro">
           <p className="editor-section-kicker">Creative control room</p>
           <h1>Make it unmistakably yours.</h1>
-          <p>Frame it, personalise it and export a post-ready GoaByte graphic.</p>
+          <p>Pick a format, tune the frame and post a Goa-ready graphic.</p>
         </div>
         <FormatSelector
           value={format}
@@ -118,20 +108,27 @@ export function EditorWorkspace({
         />
       </div>
 
-      {/* Source order is deliberate. On MOBILE the preview comes first: the
-          result is the product, and burying it under a form, three buttons and
-          a share panel means a phone user scrolls past everything to see what
-          they made. On desktop there is room for both, so the controls move
-          left and the preview right. */}
       <div className="editor-workspace-grid">
         <aside className="editor-control-rail" data-format={format}>
           <div className="editor-rail-heading">
-            <span>01</span>
+            <span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden>
+                <path d="M4 8V4h4m8 0h4v4m0 8v4h-4M8 20H4v-4M9 12h6m-3-3v6" />
+              </svg>
+            </span>
             <div>
               <p className="editor-section-kicker">Tune the composition</p>
               <h2>Photo controls</h2>
             </div>
           </div>
+
+          {format === 'pfp' ? (
+            <FrameSelector
+              value={pfpFrame}
+              onChange={editor.setPfpFrame}
+              disabled={state.isExporting}
+            />
+          ) : null}
 
           <PhotoPositionControls
             value={adjustments[format]}
@@ -139,14 +136,16 @@ export function EditorWorkspace({
             disabled={state.isExporting}
           />
 
-          {isCard ? (
+          {isBuilder || isCrew ? (
             <section className="editor-details-card">
               <div className="editor-details-heading">
                 <div>
-                  <p className="editor-section-kicker">Identity layer</p>
-                  <h3>Builder details</h3>
+                  <p className="editor-section-kicker">
+                    {isCrew ? 'Crew leader' : 'Identity layer'}
+                  </p>
+                  <h3>{isCrew ? 'Leader details' : 'Builder details'}</h3>
                 </div>
-                <span>Included in ID</span>
+                <span>{isCrew ? 'Member 01' : 'Included in ID'}</span>
               </div>
               <BuilderFieldsForm
                 fields={fields}
@@ -156,37 +155,56 @@ export function EditorWorkspace({
             </section>
           ) : (
             <div className="editor-format-tip">
-              <span aria-hidden="true">✦</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden>
+                <path d="m12 3 1.6 5.4L19 10l-5.4 1.6L12 17l-1.6-5.4L5 10l5.4-1.6L12 3Z" />
+              </svg>
               <p>
-                Profile mode keeps the energy focused on your photo. Switch to Builder ID
-                to add your name, role and scannable studio QR.
+                Pick from three original PFP looks. Switch to Builder ID for a proper
+                credential, or Crew Frame for a 1–4 member team poster.
               </p>
             </div>
           )}
+
+          {isCrew ? (
+            <CrewFieldsPanel
+              fields={fields}
+              crew={crew}
+              editor={editor}
+              disabled={state.isExporting}
+            />
+          ) : null}
 
           {state.exportError ? <InlineError error={state.exportError} /> : null}
 
           <div className="editor-action-card">
             <p className="editor-section-kicker">Ready when you are</p>
-            {/*
-              Sits ABOVE the button it explains, inside the same card. As a
-              trailing sibling it was clipped by the rail's height constraint on
-              desktop, leaving Download disabled with the reason cut off
-              mid-sentence — an unexplained disabled action.
-            */}
             {!ready ? (
-              <p className="editor-required-message text-sm text-cream-dim/70">
-                Add your name and what you build to generate your Builder ID.
+              <p className="editor-required-message">
+                {isCrew
+                  ? 'Add the leader name, role and crew name to prepare this Crew Frame.'
+                  : 'Add your name, stack and team to prepare your Builder ID.'}
               </p>
             ) : null}
             <div className="editor-action-row">
               <Button
                 className="editor-download-button"
-                onClick={editor.download}
-                disabled={state.isExporting || !ready}
+                onClick={() => {
+                  if (prepared.graphic) {
+                    saveBlob(prepared.graphic.file, prepared.graphic.file.name)
+                  }
+                }}
+                disabled={!prepared.graphic || prepared.status !== 'ready'}
               >
-                {state.isExporting ? 'Generating…' : 'Download PNG'}
-                <span aria-hidden="true">↓</span>
+                <span>
+                  {prepared.status === 'preparing'
+                    ? 'Preparing PNG…'
+                    : prepared.graphic
+                      ? 'Download PNG'
+                      : 'Complete the details'}
+                </span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden>
+                  <path d="M12 3v12m0 0 5-5m-5 5-5-5M5 21h14" />
+                </svg>
               </Button>
               <ReplacePhotoButton
                 onFile={editor.selectFile}
@@ -205,13 +223,17 @@ export function EditorWorkspace({
             </div>
           </div>
 
-          {state.exported ? <SharePanel exported={state.exported} /> : null}
+          <SharePanel
+            graphic={prepared.graphic}
+            format={format}
+            preparation={prepared.status}
+            error={prepared.error}
+            name={fields.name}
+            team={isCrew ? crew.teamName : fields.team}
+          />
         </aside>
 
         <section className="editor-preview-stage">
-          {/* The primary label on the screen: the result outranks the
-              controls, so it gets cream and size rather than the same yellow
-              micro-caps everything else uses. */}
           <div className="editor-preview-heading">
             <div>
               <p className="editor-section-kicker">Live canvas</p>
@@ -261,6 +283,6 @@ export function EditorWorkspace({
           ) : null}
         </section>
       </div>
-    </Panel>
+    </section>
   )
 }

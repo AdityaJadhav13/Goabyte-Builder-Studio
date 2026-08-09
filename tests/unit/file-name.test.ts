@@ -61,4 +61,8 @@ describe('buildFileName', () => {
   it('always ends in .png', () => {
     expect(buildFileName('pfp', '🚀')).toMatch(/\.png$/)
   })
+
+  it('identifies Crew Frame exports without changing the team slug', () => {
+    expect(buildFileName('crew', 'GoaByte')).toBe('hhgoa-2026-goabyte-crew.png')
+  })
 })

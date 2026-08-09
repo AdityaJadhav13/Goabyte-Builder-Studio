@@ -41,12 +41,15 @@ const editing = (overrides: Partial<EditingState> = {}): EditorState => ({
   image: image(),
   assets: ASSETS,
   format: 'pfp',
+  pfpFrame: 'postcard',
   crops: {
     pfp: { x: 0, y: 0, width: 1, height: 1 },
     'builder-card': { x: 0, y: 0, width: 1, height: 0.8 },
+    crew: { x: 0, y: 0, width: 1, height: 1 },
   },
   quality: 'ok',
-  fields: { name: '', role: '', title: null },
+  fields: { name: '', role: '', team: 'GoaByte', title: null },
+  crew: { teamName: 'GoaByte Crew', projectUrl: '', members: [] },
   isExporting: false,
   exportError: null,
   exported: null,
@@ -137,14 +140,19 @@ describe('framing', () => {
       crops: {
         pfp: { x: 5, y: -3, width: 2, height: 2 },
         'builder-card': { x: -1, y: -1, width: 3, height: 3 },
+        crew: { x: -2, y: 4, width: 0.75, height: 0.75 },
       },
       quality: 'ok',
-      fields: { name: '', role: '', title: null },
+      fields: { name: '', role: '', team: 'GoaByte', title: null },
+      pfpFrame: 'midnight',
+      crew: { teamName: 'GoaByte Crew', projectUrl: '', members: [] },
     })
     expect(next).toMatchObject({
+      pfpFrame: 'midnight',
       crops: {
         pfp: { x: 0, y: 0, width: 1, height: 1 },
         'builder-card': { x: 0, y: 0, width: 1, height: 1 },
+        crew: { x: 0, y: 0.25, width: 0.75, height: 0.75 },
       },
     })
   })
@@ -167,6 +175,20 @@ describe('framing', () => {
       crops: { pfp: { x: 0, y: 0.5, width: 0.5, height: 0.5 } },
       exported: null,
     })
+  })
+
+  it('changes the selected PFP treatment and invalidates the previous export', () => {
+    const state = editing({
+      exported: {
+        file: new File([], 'old.png'),
+        objectUrl: 'blob:old',
+        format: 'pfp',
+      },
+    })
+
+    expect(
+      editorReducer(state, { type: 'pfp-frame-changed', frame: 'heritage' }),
+    ).toMatchObject({ pfpFrame: 'heritage', exported: null })
   })
 })
 

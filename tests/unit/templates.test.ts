@@ -1,32 +1,68 @@
 import { describe, expect, it } from 'vitest'
+import {
+  BUILDER_PLATE_PATH,
+  CREW_PLATE_PATH,
+  PFP_HERITAGE_PLATE_PATH,
+  PFP_MIDNIGHT_PLATE_PATH,
+  PFP_POSTCARD_PLATE_PATH,
+} from '@/features/render/assets'
+import { PFP_FRAMES } from '@/features/render/frame-catalog'
 import { renderTemplate } from '@/features/render/render-template'
-import { PFP_LAYOUT } from '@/features/render/templates/pfp.layout'
 import { CARD_LAYOUT } from '@/features/render/templates/builder-card.layout'
+import { CREW_LAYOUT } from '@/features/render/templates/crew.layout'
+import { PFP_LAYOUT } from '@/features/render/templates/pfp.layout'
 import {
   DESIGN,
   type BuilderFields,
+  type CrewFields,
   type OutputFormat,
+  type PfpFrameId,
   type RenderAssets,
   type RenderModel,
 } from '@/features/render/types'
-import { createRecordingContext } from '@/lib/canvas/recording-context'
-import { PALETTE } from '@/lib/brand/palette'
-import { createNormalizedImage } from '@/lib/image/normalized-image'
 import { REQUIRED_HASHTAG } from '@/features/share/share-copy'
+import { PALETTE } from '@/lib/brand/palette'
+import { createRecordingContext } from '@/lib/canvas/recording-context'
+import { createNormalizedImage } from '@/lib/image/normalized-image'
 
-/**
- * Renderer tests assert LAYOUT DECISIONS, not pixels (D-5, ADR-5).
- */
+/** Renderer tests assert semantic layout decisions rather than bitmap hashes. */
 
 const ASSETS: RenderAssets = { fonts: 'ready', art: new Map() }
+const POSTCARD_PLATE = { id: 'postcard' } as unknown as ImageBitmap
+const MIDNIGHT_PLATE = { id: 'midnight' } as unknown as ImageBitmap
+const HERITAGE_PLATE = { id: 'heritage' } as unknown as ImageBitmap
+const BUILDER_PLATE = { id: 'builder' } as unknown as ImageBitmap
+const CREW_PLATE = { id: 'crew' } as unknown as ImageBitmap
+const PLATE_ASSETS: RenderAssets = {
+  fonts: 'ready',
+  art: new Map([
+    [PFP_POSTCARD_PLATE_PATH, POSTCARD_PLATE],
+    [PFP_MIDNIGHT_PLATE_PATH, MIDNIGHT_PLATE],
+    [PFP_HERITAGE_PLATE_PATH, HERITAGE_PLATE],
+    [BUILDER_PLATE_PATH, BUILDER_PLATE],
+    [CREW_PLATE_PATH, CREW_PLATE],
+  ]),
+}
 
 const FIELDS: BuilderFields = {
   name: 'Aditya Jadhav',
   role: 'Backend · Architecture',
+  team: 'GoaByte',
   title: 'Ships on deadline',
 }
 
-function model(format: OutputFormat, fields: BuilderFields | null = null): RenderModel {
+const CREW: CrewFields = {
+  teamName: 'GoaByte Crew',
+  projectUrl: 'https://example.com/goabyte',
+  members: [],
+}
+
+function model(
+  format: OutputFormat,
+  fields: BuilderFields | null = null,
+  pfpFrame: PfpFrameId = 'postcard',
+  crew: CrewFields | null = format === 'crew' ? CREW : null,
+): RenderModel {
   return {
     format,
     image: createNormalizedImage({
@@ -45,26 +81,40 @@ function model(format: OutputFormat, fields: BuilderFields | null = null): Rende
     }),
     crop: { x: 0, y: 0, width: 1, height: 1 },
     fields,
+    pfpFrame,
+    crew,
   }
 }
 
-function render(format: OutputFormat, scale = 1, fields: BuilderFields | null = null) {
+function render(
+  format: OutputFormat,
+  scale = 1,
+  fields: BuilderFields | null = null,
+  assets = ASSETS,
+  pfpFrame: PfpFrameId = 'postcard',
+  crew: CrewFields | null = format === 'crew' ? CREW : null,
+) {
   const rec = createRecordingContext()
-  renderTemplate({ ctx: rec.ctx, scale }, model(format, fields), ASSETS)
+  renderTemplate({ ctx: rec.ctx, scale }, model(format, fields, pfpFrame, crew), assets)
   return rec
 }
 
 const textOf = (rec: ReturnType<typeof render>) =>
-  rec.callsOf('fillText').map((c) => String(c.args[0]))
+  rec.callsOf('fillText').map((call) => String(call.args[0]))
 
-describe('preview/export parity — both formats (NFR-036, D-2)', () => {
-  it.each<OutputFormat>(['pfp', 'builder-card'])(
+describe('preview/export parity — every format (NFR-036, D-2)', () => {
+  it.each<OutputFormat>(['pfp', 'builder-card', 'crew'])(
     '%s emits identical drawing calls at preview and export scale',
     (format) => {
       const strip = (rec: ReturnType<typeof render>) =>
         rec.calls
-          .filter((c) => c.method !== 'setTransform')
-          .map((c) => ({ m: c.method, a: c.args, f: c.fillStyle, s: c.strokeStyle }))
+          .filter((call) => call.method !== 'setTransform')
+          .map((call) => ({
+            method: call.method,
+            args: call.args,
+            fill: call.fillStyle,
+            stroke: call.strokeStyle,
+          }))
 
       expect(strip(render(format, 0.45, FIELDS))).toEqual(
         strip(render(format, 1, FIELDS)),
@@ -72,7 +122,7 @@ describe('preview/export parity — both formats (NFR-036, D-2)', () => {
     },
   )
 
-  it.each<OutputFormat>(['pfp', 'builder-card'])(
+  it.each<OutputFormat>(['pfp', 'builder-card', 'crew'])(
     '%s applies exactly one transform carrying the scale',
     (format) => {
       const transforms = render(format, 0.45, FIELDS).callsOf('setTransform')
@@ -82,52 +132,116 @@ describe('preview/export parity — both formats (NFR-036, D-2)', () => {
   )
 })
 
-describe('PFP frame', () => {
-  it('paints an opaque base first, so exports are never transparent', () => {
+describe('vintage Goa PFP', () => {
+  it('paints an opaque base first', () => {
     const first = render('pfp').callsOf('fillRect')[0]!
-    expect(first.args).toEqual([0, 0, PFP_LAYOUT.canvas.width, PFP_LAYOUT.canvas.height])
+    expect(first.args).toEqual([0, 0, 1080, 1080])
     expect(first.fillStyle).toBe(PALETTE['green-900'])
   })
 
-  it('draws the photo full bleed', () => {
-    const draws = render('pfp').callsOf('drawImage')
-    expect(draws).toHaveLength(1)
-    const [, , , , , dx, dy, dw, dh] = draws[0]!.args as number[]
-    expect([dx, dy, dw, dh]).toEqual([0, 0, 1080, 1080])
+  it.each([
+    ['postcard', POSTCARD_PLATE],
+    ['midnight', MIDNIGHT_PLATE],
+    ['heritage', HERITAGE_PLATE],
+  ] as const)('registers the %s plate to the full square canvas', (frame, plate) => {
+    const firstDraw = render('pfp', 1, null, PLATE_ASSETS, frame).callsOf('drawImage')[0]!
+    expect(firstDraw.args[0]).toBe(plate)
+    expect(firstDraw.args.slice(1)).toEqual([0, 0, 1080, 1080])
   })
 
-  it('carries the required hashtag into the graphic itself', () => {
-    expect(textOf(render('pfp')).join(' ')).toContain(REQUIRED_HASHTAG)
+  it.each(PFP_FRAMES)('clips the user photo into the $label aperture', (frame) => {
+    const record = render('pfp', 1, null, ASSETS, frame.id)
+    expect(record.callsOf('clip')).toHaveLength(1)
+    const photo = record.callsOf('drawImage')[0]!
+
+    if (frame.aperture.shape === 'circle') {
+      const { centreX, centreY, radius } = frame.aperture
+      expect(photo.args.slice(5)).toEqual([
+        centreX - radius,
+        centreY - radius,
+        radius * 2,
+        radius * 2,
+      ])
+      expect(
+        record
+          .callsOf('arc')
+          .some((call) =>
+            call.args
+              .slice(0, 3)
+              .every((value, index) =>
+                Object.is(value, [centreX, centreY, radius][index]),
+              ),
+          ),
+      ).toBe(true)
+    } else {
+      expect(photo.args.slice(5)).toEqual([
+        frame.aperture.x,
+        frame.aperture.y,
+        frame.aperture.width,
+        frame.aperture.height,
+      ])
+    }
   })
 
-  it('lays a scrim behind the lockup so it reads over any photo', () => {
-    // Without this the frame is illegible on a bright beach shot.
-    expect(render('pfp').callsOf('createLinearGradient')).toHaveLength(1)
+  it('exposes three distinct, selectable PFP treatments', () => {
+    expect(PFP_FRAMES.map((frame) => frame.id)).toEqual([
+      'postcard',
+      'midnight',
+      'heritage',
+    ])
+    expect(new Set(PFP_FRAMES.map((frame) => frame.platePath)).size).toBe(3)
   })
 
-  it('keeps the keyline stroke fully inside the canvas', () => {
-    const stroke = render('pfp').callsOf('strokeRect').at(-1)!
-    const [x, y, w, h] = stroke.args as number[]
-    expect(x).toBe(PFP_LAYOUT.keyline.width / 2)
-    expect(x! + w! + PFP_LAYOUT.keyline.width / 2).toBeLessThanOrEqual(1080)
-    expect(y! + h! + PFP_LAYOUT.keyline.width / 2).toBeLessThanOrEqual(1080)
-  })
-
-  it('keeps every decoration clear of the subject safe zone — FR-023', () => {
-    const zone = PFP_LAYOUT.subjectSafeZone
-    const sun = PFP_LAYOUT.sun
-    const distance = Math.hypot(sun.centreX - zone.centreX, sun.centreY - zone.centreY)
-    expect(distance).toBeGreaterThan(zone.radius + sun.radius + sun.rayLength)
-    expect(PFP_LAYOUT.bar.y).toBeGreaterThan(zone.centreY + zone.radius)
+  it('carries exact GoaByte branding and the required hashtag', () => {
+    const text = textOf(render('pfp')).join(' ')
+    expect(text).toContain('HH GOA 2026')
+    expect(text).toContain('GOABYTE')
+    expect(text).toContain(REQUIRED_HASHTAG)
   })
 })
 
-describe('Builder ID card', () => {
-  it('renders name, role and title', () => {
+describe('vintage Goa Builder ID', () => {
+  it('renders exact name, stack, team and optional title', () => {
     const text = textOf(render('builder-card', 1, FIELDS)).join(' ')
     expect(text).toContain('Aditya Jadhav')
     expect(text).toContain('Backend')
-    expect(text).toContain('Ships on deadline')
+    expect(text).toContain('GoaByte')
+    expect(text).toContain('SHIPS ON DEADLINE')
+  })
+
+  it('registers the generated portrait plate to 1080×1350', () => {
+    const firstDraw = render('builder-card', 1, FIELDS, PLATE_ASSETS).callsOf(
+      'drawImage',
+    )[0]!
+    expect(firstDraw.args.slice(1)).toEqual([0, 0, 1080, 1350])
+  })
+
+  it('clips the user photo into the proper rectangular ID aperture', () => {
+    const photo = render('builder-card', 1, FIELDS).callsOf('drawImage')[0]!
+    const [, , , , , dx, dy, dw, dh] = photo.args as number[]
+    expect([dx, dy]).toEqual([CARD_LAYOUT.photo.x, CARD_LAYOUT.photo.y])
+    expect(dw).toBe(CARD_LAYOUT.photo.width)
+    expect(dh).toBe(CARD_LAYOUT.photo.height)
+    expect(dw).not.toBe(dh)
+  })
+
+  it('paints the credential heading and event metadata as exact canvas text', () => {
+    const text = textOf(render('builder-card', 1, FIELDS))
+    expect(text).toContain('HACKER HOUSE')
+    expect(text).toContain('GOA 2026')
+    expect(text).toContain('OFFICIAL BUILDER CREDENTIAL')
+    expect(text).toContain('28–31 OCT · GOA')
+  })
+
+  it('paints the real QR matrix and keeps it in the dedicated plaque', () => {
+    const record = render('builder-card', 1, FIELDS)
+    expect(record.callsOf('fillRect').length).toBeGreaterThan(150)
+    expect(CARD_LAYOUT.qr.x + CARD_LAYOUT.qr.size).toBeLessThanOrEqual(
+      CARD_LAYOUT.safeRegion.right,
+    )
+    expect(CARD_LAYOUT.qr.y + CARD_LAYOUT.qr.size).toBeLessThanOrEqual(
+      CARD_LAYOUT.safeRegion.bottom,
+    )
   })
 
   it('carries the required hashtag', () => {
@@ -136,85 +250,41 @@ describe('Builder ID card', () => {
     )
   })
 
-  it('paints the scannable QR matrix into the Builder ID', () => {
-    const record = render('builder-card', 1, FIELDS)
-    expect(record.callsOf('fillRect').length).toBeGreaterThan(150)
-    expect(CARD_LAYOUT.qr.x + CARD_LAYOUT.qr.size).toBeLessThanOrEqual(
-      CARD_LAYOUT.safeRegion.right,
-    )
-  })
-
-  it('keeps identity content inside the central safe region — FR-027', () => {
-    const { safeRegion } = CARD_LAYOUT
-    expect(CARD_LAYOUT.photo.x).toBeGreaterThanOrEqual(
-      safeRegion.left - CARD_LAYOUT.margin,
-    )
-    expect(CARD_LAYOUT.name.x).toBeGreaterThanOrEqual(
-      safeRegion.left - CARD_LAYOUT.margin,
-    )
-    expect(CARD_LAYOUT.photo.y + CARD_LAYOUT.photo.height).toBeLessThanOrEqual(
-      safeRegion.bottom,
-    )
-  })
-
-  it('omits the chip and reflows when there is no builder title — FR-033', () => {
-    const withTitle = render('builder-card', 1, FIELDS)
-    const without = render('builder-card', 1, { ...FIELDS, title: null })
-
-    expect(textOf(withTitle)).toContain('Ships on deadline')
-    expect(textOf(without)).not.toContain('Ships on deadline')
-
-    // The footer moves UP rather than leaving a hole.
-    const footerY = (rec: ReturnType<typeof render>) =>
-      Math.max(...rec.callsOf('fillText').map((c) => Number(c.args[2])))
-    expect(footerY(without)).toBeLessThan(footerY(withTitle))
-  })
-
-  it('closes the gap when the role is empty too, not just the title', () => {
-    // A card with a name and nothing else looked broken rather than minimal:
-    // the layout reserved space for blocks that were not there.
-    const footerY = (fields: BuilderFields) =>
-      Math.max(
-        ...render('builder-card', 1, fields)
-          .callsOf('fillText')
-          .map((c) => Number(c.args[2])),
-      )
-
-    const full = footerY(FIELDS)
-    const noRole = footerY({ ...FIELDS, role: '' })
-    const bare = footerY({ ...FIELDS, role: '', title: null })
-
-    expect(noRole).toBeLessThan(full)
-    expect(bare).toBeLessThan(noRole)
-  })
-
-  it('omits the role entirely rather than drawing an empty line', () => {
-    const text = textOf(render('builder-card', 1, { ...FIELDS, role: '   ' }))
+  it('omits only the optional title when it is blank', () => {
+    const text = textOf(render('builder-card', 1, { ...FIELDS, title: null }))
+    expect(text).not.toContain('Ships on deadline')
     expect(text).toContain('Aditya Jadhav')
-    expect(text.some((t) => t.trim() === '')).toBe(false)
+    expect(text).toContain('GoaByte')
   })
 
-  it('draws the title chip with INK text, never cream — DESIGN_SYSTEM §3.3', () => {
-    // cream-on-pink is 3.27:1 and fails AA. This is the pairing most likely to
-    // be got wrong by someone working from a screenshot.
-    const chipText = render('builder-card', 1, FIELDS)
-      .callsOf('fillText')
-      .find((c) => String(c.args[0]).includes('Ships on deadline'))
-    expect(chipText!.fillStyle).toBe(PALETTE.ink)
-  })
-
-  it('never distorts the photo — cover-fit preserves aspect', () => {
-    const [, , , sw, sh, , , dw, dh] = render('builder-card', 1, FIELDS).callsOf(
-      'drawImage',
-    )[0]!.args as number[]
-    expect(sw! / sh!).toBeCloseTo(dw! / dh!, 2)
-  })
-
-  it('survives a long name, an emoji name and a Devanagari name', () => {
-    for (const name of ['A'.repeat(64), '🚀🔥 Builder 👨‍💻', 'आदित्य जाधव']) {
-      const rec = render('builder-card', 1, { ...FIELDS, name })
-      expect(rec.callsOf('fillText').length).toBeGreaterThan(3)
+  it('survives long, emoji and Devanagari identity fields', () => {
+    for (const fields of [
+      { ...FIELDS, name: 'A'.repeat(64) },
+      { ...FIELDS, name: '🚀🔥 Builder 👨‍💻' },
+      { ...FIELDS, name: 'आदित्य जाधव', team: 'टीम गोवाबाइट' },
+      { ...FIELDS, role: 'TypeScript React Canvas Architecture Product Design' },
+    ]) {
+      expect(
+        render('builder-card', 1, fields).callsOf('fillText').length,
+      ).toBeGreaterThan(8)
     }
+  })
+})
+
+describe('GoaByte Crew Frame', () => {
+  it('dispatches the crew renderer at its true 2048×1362 output size', () => {
+    const firstDraw = render('crew', 1, FIELDS, PLATE_ASSETS).callsOf('drawImage')[0]!
+    expect(firstDraw.args[0]).toBe(CREW_PLATE)
+    expect(firstDraw.args.slice(1)).toEqual([0, 0, 2048, 1362])
+    expect(CREW_LAYOUT.canvas).toEqual({ width: 2048, height: 1362 })
+  })
+
+  it('renders the team, lead builder and required campaign hashtag', () => {
+    const text = textOf(render('crew', 1, FIELDS)).join(' ')
+    expect(text).toContain('GOABYTE CREW')
+    expect(text).toContain('Aditya Jadhav')
+    expect(text).toContain('BACKEND · ARCHITECTURE')
+    expect(text).toContain(REQUIRED_HASHTAG)
   })
 })
 
@@ -222,15 +292,12 @@ describe('layout configuration invariants', () => {
   it('each layout matches its declared export size', () => {
     expect(PFP_LAYOUT.canvas).toEqual(DESIGN.pfp)
     expect(CARD_LAYOUT.canvas).toEqual(DESIGN['builder-card'])
+    expect(CREW_LAYOUT.canvas).toEqual(DESIGN.crew)
   })
 
-  it('font floors are below their design sizes', () => {
-    expect(CARD_LAYOUT.name.minFontSize).toBeLessThan(CARD_LAYOUT.name.fontSize)
-    expect(CARD_LAYOUT.role.minFontSize).toBeLessThan(CARD_LAYOUT.role.fontSize)
-  })
-
-  it('no on-card text floor drops below a readable size at timeline scale', () => {
-    expect(CARD_LAYOUT.role.minFontSize).toBeGreaterThanOrEqual(24)
-    expect(CARD_LAYOUT.titleChip.minFontSize).toBeGreaterThanOrEqual(20)
+  it('identity text floors stay readable', () => {
+    expect(CARD_LAYOUT.identity.name.value.minFontSize).toBeGreaterThanOrEqual(20)
+    expect(CARD_LAYOUT.identity.role.value.minFontSize).toBeGreaterThanOrEqual(20)
+    expect(CARD_LAYOUT.identity.team.value.minFontSize).toBeGreaterThanOrEqual(20)
   })
 })

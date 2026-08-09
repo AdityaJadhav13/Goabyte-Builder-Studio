@@ -8,6 +8,32 @@ import {
   type OutputFormat,
 } from '@/features/render/types'
 
+function FormatIcon({ format }: { readonly format: OutputFormat }) {
+  if (format === 'builder-card') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden>
+        <path d="M7 4h10l2 3v14H5V7l2-3Zm2 0h6v3H9V4Z" />
+        <path d="M8 12h4m-4 4h8" />
+      </svg>
+    )
+  }
+  if (format === 'crew') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden>
+        <circle cx="9" cy="8" r="3" />
+        <circle cx="17" cy="10" r="2.5" />
+        <path d="M3 20c0-4 2.4-6 6-6s6 2 6 6m0-5c3.7 0 6 1.7 6 5" />
+      </svg>
+    )
+  }
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden>
+      <circle cx="12" cy="9" r="4" />
+      <path d="M5 21c0-4.5 2.8-7 7-7s7 2.5 7 7M4 4h4m8 0h4" />
+    </svg>
+  )
+}
+
 /**
  * Segmented control for the output format.
  *
@@ -40,6 +66,7 @@ export function FormatSelector({
             <label
               key={format}
               className="format-selector-option"
+              data-format={format}
               data-selected={checked ? 'true' : 'false'}
             >
               <input
@@ -52,7 +79,7 @@ export function FormatSelector({
                 className="sr-only"
               />
               <span className="format-selector-label">
-                <i aria-hidden="true" />
+                <FormatIcon format={format} />
                 {FORMAT_LABEL[format]}
               </span>
               <span className="format-selector-size">

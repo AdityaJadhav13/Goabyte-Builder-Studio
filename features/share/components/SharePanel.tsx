@@ -1,160 +1,221 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import type { ExportedGraphic } from '@/features/editor/editor-state'
-import { DEFAULT_CAPTION, REQUIRED_HASHTAG } from '../share-copy'
-import { canShareFile, copyCaptionOnly, openIntentWindow, shareFile } from '../share-to-x'
+import type { PreparationStatus } from '@/features/editor/use-prepared-graphic'
+import { saveBlob } from '@/features/export/download'
+import { DESIGN, type OutputFormat } from '@/features/render/types'
+import { captionForFormat, REQUIRED_HASHTAG } from '../share-copy'
+import {
+  canCopyPngToClipboard,
+  canShareFile,
+  copyCaptionOnly,
+  copyPngToClipboard,
+  openIntentWindow,
+  shareFile,
+} from '../share-to-x'
 
-/**
- * Share to X.
- *
- * The one rule this component exists to honour: we describe what ACTUALLY
- * happened, never what we hoped would happen (PRD §10, FR-055). Each branch
- * below sets its own status line, and the "attach it yourself" wording is used
- * whenever we cannot prove the image was attached.
- *
- * PROVISIONAL — SPIKE-3 measures what the X app really does with a shared file
- * and caption. The wording here is written to be true under every outcome the
- * spike can produce, but it should be revisited once there is evidence.
- */
-export function SharePanel({ exported }: { readonly exported: ExportedGraphic }) {
+/** Always-visible, capability-based share controls for the current canvas. */
+export function SharePanel({
+  graphic,
+  format,
+  preparation,
+  error,
+  name,
+  team,
+}: {
+  readonly graphic: ExportedGraphic | null
+  readonly format: OutputFormat
+  readonly preparation: PreparationStatus
+  readonly error?: string | null
+  readonly name?: string
+  readonly team?: string
+}) {
   const [status, setStatus] = useState<string | null>(null)
   const [blockedUrl, setBlockedUrl] = useState<string | null>(null)
-  const [copied, setCopied] = useState(false)
-  const [caption] = useState(DEFAULT_CAPTION)
+  const [captionCopied, setCaptionCopied] = useState(false)
+  const [pngCopied, setPngCopied] = useState(false)
+  const caption = captionForFormat(format, { name, team })
+  const nativeAvailable = graphic ? canShareFile(graphic.file, caption) : false
+  const pngClipboardAvailable = graphic ? canCopyPngToClipboard(graphic.file) : false
+  const ready = preparation === 'ready' && graphic !== null
 
-  const nativeAvailable = canShareFile(exported.file)
+  useEffect(() => {
+    setStatus(null)
+    setBlockedUrl(null)
+  }, [graphic?.objectUrl, format])
 
-  /**
-   * Native path. Async, so it cannot open a popup — which is fine, because the
-   * share sheet is not a popup. The intent path below stays synchronous.
-   */
   async function handleNativeShare() {
+    if (!graphic) return
     setBlockedUrl(null)
     try {
-      const outcome = await shareFile(exported.file, caption)
+      const outcome = await shareFile(graphic.file, caption)
       if (outcome.kind === 'dismissed') {
-        setStatus(null)
+        setStatus('Share cancelled. Your image and caption are still ready here.')
         return
       }
       setStatus(
         outcome.captionCopied
-          ? 'Shared. Your caption is copied — paste it if X did not fill it in.'
-          : 'Shared. Add the caption yourself if X did not fill it in.',
+          ? 'Image sent to the app you chose. The caption is copied as a backup.'
+          : 'Image sent to the app you chose. The caption remains below as a backup.',
       )
     } catch {
-      setStatus('Sharing was not available. Use the X button below instead.')
+      setStatus('The share sheet could not open. Use the X compose button instead.')
     }
   }
 
-  /**
-   * FR-053: window.open must be called synchronously inside the handler.
-   * Safari blocks it after an await, which is why the caption is copied AFTER
-   * the window opens rather than before.
-   */
+  /** Open X synchronously, then use the same activation to copy the PNG. */
   function handleIntent() {
+    if (!graphic) return
     const { opened, url } = openIntentWindow(caption)
-    void copyCaptionOnly(caption).then((copied) => {
-      if (opened) {
+    setBlockedUrl(opened ? null : url)
+
+    if (pngClipboardAvailable) {
+      void copyPngToClipboard(graphic.file).then((copied) => {
+        setPngCopied(copied)
         setStatus(
-          copied
-            ? 'Compose window opened and your caption is copied. Attach the image you just downloaded.'
-            : 'Compose window opened. Attach the image you just downloaded.',
+          opened
+            ? copied
+              ? 'X compose is ready with your caption. Paste once to attach the copied PNG.'
+              : `X compose is ready. Attach ${graphic.file.name} before posting.`
+            : copied
+              ? 'The X window was blocked, but the PNG is copied. Use the direct link below.'
+              : 'The X window was blocked. Use the direct link and attach the prepared PNG.',
         )
-      }
-    })
-    if (!opened) {
-      setBlockedUrl(url)
-      setStatus('Your browser blocked the popup. Use the link below.')
+      })
+      return
     }
+
+    void copyCaptionOnly(caption).then((copied) => {
+      setCaptionCopied(copied)
+      setStatus(
+        opened
+          ? `X compose is ready with your caption. Attach ${graphic.file.name} before posting.`
+          : copied
+            ? 'The X window was blocked, but your caption is copied. Use the link below.'
+            : 'Your browser blocked the X window. Use the direct link below.',
+      )
+    })
+  }
+
+  function handleCaptionCopy() {
+    void copyCaptionOnly(caption).then((copied) => {
+      setCaptionCopied(copied)
+      setStatus(
+        copied
+          ? 'Caption copied.'
+          : 'Copying is blocked here — select the caption above instead.',
+      )
+      if (copied) setTimeout(() => setCaptionCopied(false), 2500)
+    })
+  }
+
+  function handlePngCopy() {
+    if (!graphic) return
+    void copyPngToClipboard(graphic.file).then((copied) => {
+      setPngCopied(copied)
+      setStatus(
+        copied
+          ? 'PNG copied. Open X and paste it into the compose window.'
+          : 'The PNG could not be copied. Download it and attach the file instead.',
+      )
+      if (copied) setTimeout(() => setPngCopied(false), 2500)
+    })
   }
 
   return (
-    <section
-      aria-labelledby="share-heading"
-      className="border-2 border-yellow bg-green-900 p-5 shadow-ink-sm sm:p-6"
-    >
-      <div className="flex items-start justify-between gap-4">
+    <section aria-labelledby="share-heading" className="share-panel">
+      <div className="share-panel-heading">
         <div>
-          <p className="text-[10px] font-bold tracking-[0.16em] text-yellow uppercase">
-            PNG ready
-          </p>
-          <h2 id="share-heading" className="mt-1 font-display text-2xl text-cream">
-            Ready to share
-          </h2>
+          <p className="editor-section-kicker">Share without downloading</p>
+          <h2 id="share-heading">Post your build</h2>
         </div>
-        <span
-          aria-hidden
-          className="grid size-9 shrink-0 place-items-center border-2 border-ink bg-yellow font-bold text-ink shadow-ink-sm"
-        >
-          ✓
+        <span data-ready={ready ? 'true' : 'false'}>
+          {preparation === 'preparing' ? 'Preparing' : ready ? 'Image ready' : 'Waiting'}
         </span>
       </div>
 
-      <p className="mt-3 text-sm leading-relaxed text-cream-dim">
-        Your caption already includes{' '}
-        <span className="font-bold text-cream">{REQUIRED_HASHTAG}</span>.
-      </p>
-
-      <p className="mt-3 border-l-2 border-green-600 bg-green-800 px-3 py-2 font-mono text-xs leading-relaxed break-words text-cream-dim select-all">
-        {caption}
-      </p>
-
-      <div className="mt-4 flex flex-wrap gap-3">
-        {nativeAvailable ? (
-          <Button onClick={handleNativeShare}>Share image</Button>
-        ) : null}
-        <Button
-          variant={nativeAvailable ? 'secondary' : 'primary'}
-          onClick={handleIntent}
-        >
-          Post on X
-        </Button>
-        {/*
-          FR-054 asks for a copy fallback. Copying only happened as a side
-          effect of opening X, which is no use to someone whose popup was
-          blocked or who wants to post from another device.
-        */}
-        <Button
-          variant="secondary"
-          onClick={() => {
-            void copyCaptionOnly(caption).then((ok) => {
-              setCopied(ok)
-              setStatus(
-                ok
-                  ? 'Caption copied.'
-                  : 'Copying is blocked here — select the caption above instead.',
-              )
-              if (ok) setTimeout(() => setCopied(false), 2500)
-            })
-          }}
-        >
-          {copied ? 'Copied' : 'Copy caption'}
-        </Button>
+      <div className="share-panel-preview">
+        {graphic ? (
+          // A same-origin blob URL stays entirely on-device.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={graphic.objectUrl}
+            alt={`Prepared ${graphic.file.name}`}
+            width={DESIGN[format].width}
+            height={DESIGN[format].height}
+          />
+        ) : (
+          <div className="share-panel-placeholder" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M4 4h16v16H4zM7 15l3-3 2 2 2-2 3 3M8 9h.01" />
+            </svg>
+          </div>
+        )}
+        <div>
+          <strong>
+            {preparation === 'preparing'
+              ? 'Rendering the latest edit…'
+              : graphic?.file.name || 'Complete the required details'}
+          </strong>
+          <p>
+            Native share sends the real PNG and caption together. Desktop X opens with the
+            caption ready and copies the PNG when the browser allows it.
+          </p>
+        </div>
       </div>
 
-      {/* aria-live so the outcome is announced, not just displayed. */}
-      <p aria-live="polite" className="mt-3 min-h-5 text-sm text-cream">
-        {status}
+      <p className="share-panel-caption select-all">{caption}</p>
+      <p className="share-panel-hashtag">
+        Required tag: <strong>{REQUIRED_HASHTAG}</strong>
       </p>
 
+      <div className="share-panel-actions">
+        {nativeAvailable ? (
+          <Button onClick={handleNativeShare} disabled={!ready}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden>
+              <path d="M12 16V3m0 0L7 8m5-5 5 5M5 13v7h14v-7" />
+            </svg>
+            Share image
+          </Button>
+        ) : null}
+        <Button onClick={handleIntent} disabled={!ready}>
+          <span aria-hidden="true" className="share-x-mark">
+            X
+          </span>
+          {ready ? 'Post on X' : 'Preparing X post…'}
+        </Button>
+        {pngClipboardAvailable ? (
+          <Button variant="secondary" onClick={handlePngCopy} disabled={!ready}>
+            {pngCopied ? 'PNG copied' : 'Copy PNG'}
+          </Button>
+        ) : null}
+        <Button variant="secondary" onClick={handleCaptionCopy}>
+          {captionCopied ? 'Caption copied' : 'Copy caption'}
+        </Button>
+        {graphic ? (
+          <Button
+            variant="secondary"
+            onClick={() => saveBlob(graphic.file, graphic.file.name)}
+          >
+            Download PNG
+          </Button>
+        ) : null}
+      </div>
+
+      {preparation === 'error' ? (
+        <p className="share-panel-error" role="alert">
+          {error}
+        </p>
+      ) : null}
+      <p aria-live="polite" className="share-panel-status">
+        {status}
+      </p>
       {blockedUrl ? (
-        <a
-          href={blockedUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-sm font-bold text-yellow underline underline-offset-2"
-        >
+        <a href={blockedUrl} target="_blank" rel="noopener noreferrer">
           Open X in a new tab
         </a>
-      ) : null}
-
-      {!nativeAvailable ? (
-        <p className="mt-3 text-xs leading-relaxed text-cream-dim/70">
-          Your browser can&rsquo;t attach the image to a post automatically, so attach the
-          file you just downloaded. We won&rsquo;t pretend otherwise.
-        </p>
       ) : null}
     </section>
   )

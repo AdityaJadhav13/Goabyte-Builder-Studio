@@ -1,0 +1,6 @@
+.next/
+.next-dev/
+test-results/
+playwright-report/
+coverage/
+docs/.DS_Store

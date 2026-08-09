@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import {
   reviveSlot,
   type Releasable,
@@ -41,5 +41,9 @@ export function useResourceSlot<T extends Releasable>(): {
 
   const isLive = useCallback(() => liveRef.current, [])
 
-  return { get, isLive }
+  // Consumers place this accessor in callback dependency arrays. Returning a
+  // fresh wrapper on every render made those callbacks unstable; the Builder
+  // form then re-ran its debounced change effect after export and invalidated
+  // the just-created share result even though no field had changed.
+  return useMemo(() => ({ get, isLive }), [get, isLive])
 }

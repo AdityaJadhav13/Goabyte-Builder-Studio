@@ -6,14 +6,19 @@ import type { NormalizedImage } from '@/lib/image/normalized-image'
  * ARCHITECTURE §5 — this is the integration contract.
  */
 
-export type OutputFormat = 'pfp' | 'builder-card'
+export type OutputFormat = 'pfp' | 'builder-card' | 'crew'
 
-export const OUTPUT_FORMATS: readonly OutputFormat[] = ['pfp', 'builder-card']
+export const OUTPUT_FORMATS: readonly OutputFormat[] = ['pfp', 'builder-card', 'crew']
 
 export const FORMAT_LABEL: Record<OutputFormat, string> = {
   pfp: 'Profile picture',
   'builder-card': 'Builder ID',
+  crew: 'Crew frame',
 }
+
+export type PfpFrameId = 'heritage' | 'postcard' | 'midnight'
+
+export const DEFAULT_PFP_FRAME: PfpFrameId = 'postcard'
 
 export interface OutputSize {
   readonly width: number
@@ -32,6 +37,7 @@ export interface OutputSize {
 export const DESIGN: Record<OutputFormat, OutputSize> = {
   pfp: { width: 1080, height: 1080 },
   'builder-card': { width: 1080, height: 1350 },
+  crew: { width: 2048, height: 1362 },
 }
 
 /**
@@ -41,7 +47,8 @@ export const DESIGN: Record<OutputFormat, OutputSize> = {
  */
 export const PHOTO_ASPECT: Record<OutputFormat, number> = {
   pfp: 1,
-  'builder-card': 402 / 590,
+  'builder-card': 560 / 625,
+  crew: 1,
 }
 
 export const aspectOf = (format: OutputFormat): number => PHOTO_ASPECT[format]
@@ -59,21 +66,41 @@ export const PREVIEW_DPR_CAP = 2
 export const PREVIEW_MAX_WIDTH_PX: Record<OutputFormat, number> = {
   pfp: 520,
   'builder-card': 430,
+  crew: 760,
 }
 
 export interface BuilderFields {
   readonly name: string
   readonly role: string
+  readonly team: string
   /** null ⇒ omit the chip and reflow; never render an empty chip (FR-033). */
   readonly title: string | null
+}
+
+export interface CrewMember {
+  readonly id: string
+  readonly name: string
+  readonly role: string
+  readonly image: NormalizedImage
+  readonly crop: CropRect
+}
+
+export interface CrewFields {
+  readonly teamName: string
+  readonly projectUrl: string
+  /** Additional members; the main Builder photo/fields are always the leader. */
+  readonly members: readonly CrewMember[]
 }
 
 export interface RenderModel {
   readonly format: OutputFormat
   readonly image: NormalizedImage
   readonly crop: CropRect
-  /** Required for 'builder-card', ignored by 'pfp'. */
+  /** Required for Builder ID and Crew, ignored by PFP. */
   readonly fields: BuilderFields | null
+  readonly pfpFrame: PfpFrameId
+  /** Required for Crew; ignored by the other formats. */
+  readonly crew: CrewFields | null
 }
 
 export interface RenderTarget {

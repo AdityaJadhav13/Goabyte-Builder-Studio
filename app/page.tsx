@@ -23,10 +23,11 @@ export default function Home() {
     file: File
     name: string
     role: string
+    team: string
   } | null>(null)
 
   const handleFormSubmit = useCallback(
-    (data: { file: File; name: string; role: string }) => {
+    (data: { file: File; name: string; role: string; team: string }) => {
       setPendingSubmit(data)
       setEditorMode(true)
     },
@@ -77,7 +78,11 @@ export default function Home() {
             onReturnHome={handleReturnHome}
             initialFields={
               pendingSubmit
-                ? { name: pendingSubmit.name, role: pendingSubmit.role }
+                ? {
+                    name: pendingSubmit.name,
+                    role: pendingSubmit.role,
+                    team: pendingSubmit.team,
+                  }
                 : undefined
             }
           />

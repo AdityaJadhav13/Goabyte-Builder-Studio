@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { FONT_STACK, REQUIRED_FACES } from '@/features/render/fonts'
 import { PFP_LAYOUT } from '@/features/render/templates/pfp.layout'
 import { CARD_LAYOUT } from '@/features/render/templates/builder-card.layout'
+import { CREW_LAYOUT } from '@/features/render/templates/crew.layout'
 
 /**
  * Follow-up created by SPIKE-4 (docs/spikes/SPIKE-4-FONTS-ASSETS.md §10).
@@ -19,13 +20,18 @@ interface TypeSpec {
 }
 
 function specsIn(layout: object): TypeSpec[] {
-  return Object.values(layout).filter(
-    (v): v is TypeSpec =>
-      typeof v === 'object' && v !== null && 'fontFamily' in v && 'fontWeight' in v,
-  )
+  return Object.values(layout).flatMap((value): TypeSpec[] => {
+    if (typeof value !== 'object' || value === null) return []
+    if ('fontFamily' in value && 'fontWeight' in value) return [value as TypeSpec]
+    return specsIn(value)
+  })
 }
 
-const ALL_SPECS = [...specsIn(PFP_LAYOUT), ...specsIn(CARD_LAYOUT)]
+const ALL_SPECS = [
+  ...specsIn(PFP_LAYOUT),
+  ...specsIn(CARD_LAYOUT),
+  ...specsIn(CREW_LAYOUT),
+]
 
 /** 'HHG Display' from `"HHG Display", Georgia, serif`. */
 const primaryFamily = (stack: string): string =>

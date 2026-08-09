@@ -11,9 +11,9 @@ This is the integration contract for the Hacker House Goa 2026 Task 1 submission
 ### Codex UI delivered
 
 - GoaByte landing hierarchy and responsive split layout.
-- Miniature proof of Profile Picture and Builder ID outputs.
+- Miniature proof of Profile Picture, Crew Frame and Builder ID outputs.
 - Desktop drag/drop presentation plus Browse Photos and Use Camera actions.
-- Premium glass upload form with aurora refraction, light sweep and layered glass controls.
+- Opaque poster-style upload form with ink keylines, solid colour blocks and hard offset shadows.
 - Live on-device camera preview, permission/error states and JPEG capture.
 - Supported-format and on-device privacy messaging beside upload.
 - Selected-photo presentation and change action.
@@ -22,8 +22,10 @@ This is the integration contract for the Hacker House Goa 2026 Task 1 submission
 - Editor masthead and compact generated/share-success treatment.
 - Start-over navigation back to the actual landing page.
 - About Us section with the GoaByte roster, responsibilities and LinkedIn actions.
-- Original Goa-after-dark PFP and Builder ID poster templates with layered borders,
-  editorial type, portrait ID framing, halftone, palm and wave motifs.
+- Three selectable original PFP frames, a proper lanyard-style Builder ID, and a true
+  2048×1362 Crew Frame for one to four builders.
+- Always-visible prepared sharing: native PNG+caption sharing where supported and an
+  honest prefilled X compose/copy-or-attach fallback on desktop.
 - Visual checks at 320, 375, 390, 768 and 1440 px with no horizontal overflow.
 
 ### Claude next
@@ -43,11 +45,12 @@ This is the integration contract for the Hacker House Goa 2026 Task 1 submission
 2. Photo selection through browse, camera and desktop drag/drop.
 3. JPG, PNG, WebP and HEIC/HEIF support with clear limits.
 4. Client-side processing and an explicit privacy statement.
-5. Two outputs:
+5. Three outputs:
    - Profile Picture — 1080×1080 PNG.
    - Builder ID — 1080×1350 PNG.
+   - Crew Frame — 2048×1362 PNG for one to four members.
 6. Automatic framing as the default path.
-7. Optional Builder ID fields: name, role/stack and builder title.
+7. Builder ID identity fields: name, role/stack, team name and optional builder title.
 8. Live preview using the same renderer as export.
 9. Real PNG download.
 10. Share to X with `#FrameInGoa`, native share where supported and an honest manual-attachment fallback.
