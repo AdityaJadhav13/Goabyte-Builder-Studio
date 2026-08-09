@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createNormalizedImage } from '@/lib/image/normalized-image'
-import { ResourceSlot } from '@/lib/resource/resource-slot'
+import { ResourceSlot, reviveSlot } from '@/lib/resource/resource-slot'
 
 /**
  * Resource ownership. The reducer is pure and never disposes, so these tests
@@ -122,5 +122,50 @@ describe('ResourceSlot', () => {
 
     expect(disposals.every((d) => d.mock.calls.length === 1)).toBe(true)
     expect(slot.peek()).toBeNull()
+  })
+})
+
+describe('reviveSlot — the Strict Mode blank-preview defect', () => {
+  it('replaces a disposed slot instead of handing back the corpse', () => {
+    // React refs survive a remount. Strict Mode runs mount → cleanup → mount
+    // on the same instance, so the cleanup's dispose() leaves a dead slot that
+    // render-time creation never replaces.
+    const slot = new ResourceSlot()
+    slot.dispose()
+
+    const revived = reviveSlot(slot)
+
+    expect(revived).not.toBe(slot)
+    expect(revived.isDisposed).toBe(false)
+  })
+
+  it('keeps a live slot, so ownership is never silently reset mid-session', () => {
+    const slot = new ResourceSlot()
+    const image = stubImage(vi.fn())
+    slot.adopt(image)
+
+    expect(reviveSlot(slot)).toBe(slot)
+    expect(reviveSlot(slot).peek()).toBe(image)
+  })
+
+  it('creates a slot from nothing on first use', () => {
+    expect(reviveSlot(null).isDisposed).toBe(false)
+  })
+
+  it('an image adopted after revival stays live — the actual bug', () => {
+    // Before the fix: the in-flight decode adopted into a disposed slot, which
+    // released the image on the spot, and the editor published a released
+    // canvas. The preview was blank.
+    const dispose = vi.fn()
+    let slot: ResourceSlot<ReturnType<typeof stubImage>> | null = new ResourceSlot()
+    slot.dispose() // simulated unmount
+
+    slot = reviveSlot(slot)
+    const image = stubImage(dispose)
+    slot.adopt(image)
+
+    expect(dispose).not.toHaveBeenCalled()
+    expect(image.isReleased).toBe(false)
+    expect(slot.peek()).toBe(image)
   })
 })

@@ -73,16 +73,26 @@ export function SharePanel({ exported }: { readonly exported: ExportedGraphic })
   return (
     <section
       aria-labelledby="share-heading"
-      className="border-2 border-cream-dim/25 bg-green-900 p-5"
+      className="border-2 border-yellow bg-green-900 p-5 shadow-ink-sm sm:p-6"
     >
-      <h2
-        id="share-heading"
-        className="text-xs font-bold tracking-[0.18em] text-yellow uppercase"
-      >
-        Share it
-      </h2>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-[10px] font-bold tracking-[0.16em] text-yellow uppercase">
+            PNG ready
+          </p>
+          <h2 id="share-heading" className="mt-1 font-display text-2xl text-cream">
+            Ready to share
+          </h2>
+        </div>
+        <span
+          aria-hidden
+          className="grid size-9 shrink-0 place-items-center border-2 border-ink bg-yellow font-bold text-ink shadow-ink-sm"
+        >
+          ✓
+        </span>
+      </div>
 
-      <p className="mt-2 text-sm leading-relaxed text-cream-dim">
+      <p className="mt-3 text-sm leading-relaxed text-cream-dim">
         Your caption already includes{' '}
         <span className="font-bold text-cream">{REQUIRED_HASHTAG}</span>.
       </p>

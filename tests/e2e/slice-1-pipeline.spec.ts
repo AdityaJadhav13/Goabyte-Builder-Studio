@@ -296,9 +296,15 @@ test('the whole flow is reachable by keyboard (NFR-015)', async ({ page }) => {
   let reachedUpload = false
   for (let i = 0; i < 12 && !reachedUpload; i++) {
     await page.keyboard.press('Tab')
-    reachedUpload = await page.evaluate(() =>
-      /upload photo/i.test(document.activeElement?.textContent ?? ''),
-    )
+    // Match the ACCESSIBLE NAME, which may come from aria-label rather than
+    // text content — asserting on textContent alone reported a failure when
+    // keyboard access was in fact working.
+    reachedUpload = await page.evaluate(() => {
+      const el = document.activeElement
+      if (!el) return false
+      const name = el.getAttribute('aria-label') ?? el.textContent ?? ''
+      return /upload photo/i.test(name)
+    })
   }
   expect(reachedUpload, 'upload control not reachable by keyboard').toBe(true)
 
@@ -307,4 +313,44 @@ test('the whole flow is reachable by keyboard (NFR-015)', async ({ page }) => {
 
   await page.getByRole('button', { name: 'Download PNG' }).focus()
   await expect(page.getByRole('button', { name: 'Download PNG' })).toBeFocused()
+})
+
+test.describe('every landing entry point uses the canonical pipeline', () => {
+  /** Drop a file with an EMPTY type string, as macOS/iOS report for HEIC. */
+  async function dropFile(page: Page, name: string, fixtureName: string) {
+    const data = readFileSync(fixture(fixtureName)).toString('base64')
+    // DataTransfer must be built as a handle in the page and passed to
+    // dispatchEvent — constructing it inside evaluate() does not attach.
+    const dataTransfer = await page.evaluateHandle(
+      ({ name, data }) => {
+        const bytes = Uint8Array.from(atob(data), (c) => c.charCodeAt(0))
+        const dt = new DataTransfer()
+        dt.items.add(new File([bytes], name, { type: '' }))
+        return dt
+      },
+      { name, data },
+    )
+    await page.locator('.landing-upload-zone').dispatchEvent('drop', { dataTransfer })
+  }
+
+  test('a dropped photo reporting no MIME type is still accepted', async ({ page }) => {
+    // The regression this guards: filtering drops on `file.type` silently
+    // discarded HEIC from Finder and Files, which report an empty type.
+    await dropFile(page, 'IMG_0001.HEIC', 'portrait.jpg')
+
+    await expect(page.locator('#continue-btn')).toBeEnabled({ timeout: 10_000 })
+    await page.locator('#continue-btn').click()
+    await expectEditorReady(page)
+  })
+
+  test('a dropped unsupported file reports an error rather than doing nothing', async ({
+    page,
+  }) => {
+    await dropFile(page, 'notes.pdf', 'not-an-image.jpg')
+
+    await page.locator('#continue-btn').click()
+    const alert = page.locator('main').getByRole('alert')
+    await expect(alert).toBeVisible({ timeout: 20_000 })
+    await expect(alert).toContainText(/file type isn't supported/i)
+  })
 })

@@ -61,3 +61,25 @@ export class ResourceSlot<T extends Releasable> {
     previous?.release()
   }
 }
+
+/**
+ * Return `slot` if it is still usable, otherwise a fresh one.
+ *
+ * `dispose()` is permanent, which is correct: a slot that has been torn down
+ * must never silently come back to life and start owning resources again.
+ *
+ * But React refs survive a remount, and React Strict Mode simulates one by
+ * running mount → cleanup → mount on the same component instance. The cleanup
+ * disposes the slot; the ref still points at the corpse; and because slot
+ * creation happened during render it never runs again. An in-flight decode
+ * then adopts into a dead slot, which releases the image on the spot, and the
+ * editor publishes a released canvas — a blank preview.
+ *
+ * Reviving at the point of USE rather than at render time closes that, and
+ * does so for genuine remounts too, not only Strict Mode's rehearsal.
+ */
+export function reviveSlot<T extends Releasable>(
+  slot: ResourceSlot<T> | null,
+): ResourceSlot<T> {
+  return slot !== null && !slot.isDisposed ? slot : new ResourceSlot<T>()
+}

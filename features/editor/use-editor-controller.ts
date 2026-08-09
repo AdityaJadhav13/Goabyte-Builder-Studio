@@ -17,7 +17,8 @@ import { decodeImage } from '@/lib/image/decode'
 import { normalizeImage } from '@/lib/image/normalize'
 import { autoFrame, effectiveResolution, type CropRect } from '@/lib/image/crop-geometry'
 import type { NormalizedImage } from '@/lib/image/normalized-image'
-import { ResourceSlot, type Releasable } from '@/lib/resource/resource-slot'
+import { type Releasable } from '@/lib/resource/resource-slot'
+import { useResourceSlot } from './use-resource-slot'
 import { editorReducer } from './editor-machine'
 import {
   IDLE_STATE,
@@ -98,11 +99,11 @@ export interface EditorController {
 export function useEditorController(): EditorController {
   const [state, dispatch] = useReducer(editorReducer, IDLE_STATE)
 
-  const imageSlotRef = useRef<ResourceSlot<NormalizedImage> | null>(null)
-  imageSlotRef.current ??= new ResourceSlot<NormalizedImage>()
-
-  const exportSlotRef = useRef<ResourceSlot<ExportedGraphic & Releasable> | null>(null)
-  exportSlotRef.current ??= new ResourceSlot<ExportedGraphic & Releasable>()
+  // Resolved at point of USE, never cached across a remount — a disposed slot
+  // would otherwise release every image the pipeline handed it, publishing a
+  // blank preview. See `reviveSlot`.
+  const imageSlot = useResourceSlot<NormalizedImage>()
+  const exportSlot = useResourceSlot<ExportedGraphic & Releasable>()
 
   /**
    * Monotonic token identifying the newest pipeline run. A superseded run
@@ -111,22 +112,14 @@ export function useEditorController(): EditorController {
    */
   const runIdRef = useRef(0)
 
-  // Safety net only. Explicit disposal on start-over and on failure is the
-  // actual mechanism; this catches navigation away mid-flight.
-  useEffect(() => {
-    const image = imageSlotRef.current
-    const exported = exportSlotRef.current
-    return () => {
-      image?.dispose()
-      exported?.dispose()
-    }
-  }, [])
-
-  const failPipeline = useCallback((error: AppError) => {
-    imageSlotRef.current?.adopt(null)
-    exportSlotRef.current?.adopt(null)
-    dispatch({ type: 'preparation-failed', error })
-  }, [])
+  const failPipeline = useCallback(
+    (error: AppError) => {
+      imageSlot.get().adopt(null)
+      exportSlot.get().adopt(null)
+      dispatch({ type: 'preparation-failed', error })
+    },
+    [imageSlot, exportSlot],
+  )
 
   const selectFile = useCallback(
     (file: File) => {
@@ -202,8 +195,14 @@ export function useEditorController(): EditorController {
           // adopt() and dispatch() run in the same synchronous block. React
           // batches synchronous updates, so no render can observe the window
           // where the previous image is released but state still points at it.
-          imageSlotRef.current?.adopt(image)
-          exportSlotRef.current?.adopt(null)
+          // A genuinely unmounted editor must not resurrect a slot nobody
+          // will dispose — release and stop instead.
+          if (!imageSlot.isLive()) {
+            image.release()
+            return
+          }
+          imageSlot.get().adopt(image)
+          exportSlot.get().adopt(null)
           dispatch({
             type: 'image-ready',
             image,
@@ -219,20 +218,26 @@ export function useEditorController(): EditorController {
         }
       })()
     },
-    [failPipeline],
+    [failPipeline, imageSlot, exportSlot],
   )
 
-  const setFormat = useCallback((format: OutputFormat) => {
-    // The previous export belongs to the old format; release it as the state
-    // that referenced it goes away.
-    exportSlotRef.current?.adopt(null)
-    dispatch({ type: 'format-changed', format })
-  }, [])
+  const setFormat = useCallback(
+    (format: OutputFormat) => {
+      // The previous export belongs to the old format; release it as the state
+      // that referenced it goes away.
+      exportSlot.get().adopt(null)
+      dispatch({ type: 'format-changed', format })
+    },
+    [exportSlot],
+  )
 
-  const setFields = useCallback((fields: Partial<BuilderFields>) => {
-    exportSlotRef.current?.adopt(null)
-    dispatch({ type: 'fields-changed', fields })
-  }, [])
+  const setFields = useCallback(
+    (fields: Partial<BuilderFields>) => {
+      exportSlot.get().adopt(null)
+      dispatch({ type: 'fields-changed', fields })
+    },
+    [exportSlot],
+  )
 
   const download = useCallback(() => {
     if (!isEditing(state) || state.isExporting) return
@@ -262,7 +267,7 @@ export function useEditorController(): EditorController {
           format,
         })
 
-        exportSlotRef.current?.adopt(exported)
+        exportSlot.get().adopt(exported)
         saveBlob(result.blob, result.fileName)
         dispatch({ type: 'export-settled', exported })
       } catch (cause) {
@@ -277,10 +282,10 @@ export function useEditorController(): EditorController {
   const startOver = useCallback(() => {
     // Invalidate any in-flight run so its result is released, not adopted.
     runIdRef.current++
-    imageSlotRef.current?.adopt(null)
-    exportSlotRef.current?.adopt(null)
+    imageSlot.get().adopt(null)
+    exportSlot.get().adopt(null)
     dispatch({ type: 'start-over' })
-  }, [])
+  }, [imageSlot, exportSlot])
 
   return useMemo(
     () => ({ state, selectFile, setFormat, setFields, download, startOver }),

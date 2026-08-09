@@ -1,18 +1,16 @@
 'use client'
 
-import { useId, useRef, useState, useCallback } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { FormatShowcase } from '@/components/layout/FormatShowcase'
 import { ACCEPTED_FILE_TYPES } from '@/features/upload/accept'
+import { MAX_FILE_BYTES } from '@/features/upload/validate-file'
+
+const MAX_FILE_MB = Math.round(MAX_FILE_BYTES / 1024 / 1024)
 
 /**
- * The landing form card — right column of the split-screen hero.
- *
- * Replicates the ID card generator reference: photo upload buttons at top,
- * name and designation/stack inputs, a validation hint, and a full-width
- * yellow Continue button.
- *
- * Once the user fills in the form and clicks Continue, it calls `onSubmit`
- * with the collected data, which the parent routes into the existing editor
- * pipeline.
+ * The first-step UI. It collects only information the existing editor can
+ * consume: one photo plus optional Builder ID fields. Validation, decoding and
+ * normalization remain owned by the editor pipeline.
  */
 export function LandingForm({
   onSubmit,
@@ -24,28 +22,28 @@ export function LandingForm({
 
   const fileRef = useRef<HTMLInputElement>(null)
   const cameraRef = useRef<HTMLInputElement>(null)
+  const previewUrlRef = useRef<string | null>(null)
+  const dragDepth = useRef(0)
 
   const [photo, setPhoto] = useState<File | null>(null)
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null)
   const [name, setName] = useState('')
   const [role, setRole] = useState('')
+  const [isDragActive, setDragActive] = useState(false)
+
+  useEffect(
+    () => () => {
+      if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current)
+    },
+    [],
+  )
 
   const handleFileSelected = useCallback((file: File) => {
     setPhoto(file)
-    // Create a URL for the preview thumbnail
+    if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current)
     const url = URL.createObjectURL(file)
-    setPhotoPreviewUrl((prev) => {
-      if (prev) URL.revokeObjectURL(prev)
-      return url
-    })
-  }, [])
-
-  const handleUploadClick = useCallback(() => {
-    fileRef.current?.click()
-  }, [])
-
-  const handleCameraClick = useCallback(() => {
-    cameraRef.current?.click()
+    previewUrlRef.current = url
+    setPhotoPreviewUrl(url)
   }, [])
 
   const handleSubmit = useCallback(() => {
@@ -53,111 +51,205 @@ export function LandingForm({
     onSubmit({ file: photo, name, role })
   }, [photo, name, role, onSubmit])
 
+  const handleDrop = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      event.preventDefault()
+      dragDepth.current = 0
+      setDragActive(false)
+
+      /*
+       * Take the first file and let the canonical pipeline judge it (FR-003).
+       * Filtering on `candidate.type` here rejected HEIC outright: macOS and
+       * iOS routinely report an EMPTY type string for it, so a dropped iPhone
+       * photo matched nothing and the drop silently did nothing — no error, no
+       * feedback. Reported MIME is exactly the signal our magic-byte sniffing
+       * exists to distrust, and type decisions belong to validation, not here.
+       * A genuinely unsupported file now produces a specific, recoverable
+       * error instead of silence.
+       */
+      const file = event.dataTransfer.files.item(0)
+      if (file) handleFileSelected(file)
+    },
+    [handleFileSelected],
+  )
+
   const canSubmit = photo !== null
 
   return (
     <div className="form-card animate-fade-up animate-delay-3">
-      {/* ── Photo section ─────────────────────────────────────────── */}
-      <div>
-        <p className="form-section-label">Photo</p>
+      <div className="form-output-proof">
+        <div>
+          <p className="form-section-label">Two ready-to-post formats</p>
+          <p className="form-helper">Profile picture and Builder ID, both as PNG.</p>
+        </div>
+        <FormatShowcase />
+      </div>
+
+      <div
+        className="landing-upload-zone"
+        data-dragging={isDragActive ? 'true' : 'false'}
+        onDragEnter={(event) => {
+          event.preventDefault()
+          dragDepth.current += 1
+          setDragActive(true)
+        }}
+        onDragOver={(event) => event.preventDefault()}
+        onDragLeave={() => {
+          dragDepth.current -= 1
+          if (dragDepth.current <= 0) setDragActive(false)
+        }}
+        onDrop={handleDrop}
+      >
+        <div className="form-section-heading">
+          <p className="form-section-label">1 · Add your photo</p>
+          <span className="form-step-status">
+            JPG · PNG · WEBP · HEIC · {MAX_FILE_MB} MB
+          </span>
+        </div>
+
         {photoPreviewUrl ? (
           <div className="photo-preview-wrapper">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={photoPreviewUrl} alt="Selected photo" className="photo-preview" />
-            <span className="photo-preview-name">{photo?.name}</span>
+            <span className="photo-preview-name">
+              <strong>Photo ready</strong>
+              <small>{photo?.name}</small>
+            </span>
             <button
               type="button"
               className="photo-change-btn"
-              onClick={handleUploadClick}
+              onClick={() => fileRef.current?.click()}
             >
               Change
             </button>
           </div>
         ) : (
-          <div className="photo-buttons">
-            <button
-              type="button"
-              className="photo-btn"
-              onClick={handleUploadClick}
-              id="upload-photo-btn"
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+          <div className="photo-empty-state">
+            <p className="photo-drop-copy">
+              {isDragActive ? 'Drop your photo here' : 'Drag and drop a photo here'}
+            </p>
+            <p className="form-helper">or choose how you want to add it</p>
+
+            <div className="photo-buttons">
+              <button
+                type="button"
+                className="photo-btn photo-btn--primary"
+                onClick={() => fileRef.current?.click()}
+                id="upload-photo-btn"
+                aria-label="Upload photo from device"
               >
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="17 8 12 3 7 8" />
-                <line x1="12" y1="3" x2="12" y2="15" />
-              </svg>
-              Upload photo
-            </button>
-            <button
-              type="button"
-              className="photo-btn"
-              onClick={handleCameraClick}
-              id="take-photo-btn"
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden
+                >
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="17 8 12 3 7 8" />
+                  <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
+                Browse photos
+              </button>
+              <button
+                type="button"
+                className="photo-btn"
+                onClick={() => cameraRef.current?.click()}
+                id="take-photo-btn"
+                aria-label="Take photo with camera"
               >
-                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                <circle cx="12" cy="13" r="4" />
-              </svg>
-              Take photo
-            </button>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden
+                >
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                  <circle cx="12" cy="13" r="4" />
+                </svg>
+                Use camera
+              </button>
+            </div>
           </div>
         )}
+
+        <p className="privacy-note">
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            aria-hidden
+          >
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />
+            <path d="m9 12 2 2 4-4" />
+          </svg>
+          Processed in your browser. Your photo is never uploaded.
+        </p>
+        <p className="upload-format-note">
+          JPG, PNG, WebP or HEIC · up to {MAX_FILE_MB} MB
+        </p>
       </div>
 
-      {/* ── Name field ────────────────────────────────────────────── */}
-      <div>
-        <label htmlFor="landing-name" className="form-section-label">
-          Name
-        </label>
-        <input
-          id="landing-name"
-          type="text"
-          className="form-input"
-          placeholder="Your name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          maxLength={40}
-        />
+      <div className="builder-details-group">
+        <div className="form-section-heading">
+          <div>
+            <p className="form-section-label">2 · Builder details</p>
+            <p className="form-helper">Used only for your Builder ID.</p>
+          </div>
+          <span className="form-optional-badge">Optional</span>
+        </div>
+
+        <div className="builder-fields-grid">
+          <div>
+            <label htmlFor="landing-name" className="form-field-label">
+              Name
+            </label>
+            <input
+              id="landing-name"
+              type="text"
+              className="form-input"
+              placeholder="Your name"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              maxLength={32}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="landing-role" className="form-field-label">
+              Role / stack
+            </label>
+            <input
+              id="landing-role"
+              type="text"
+              className="form-input"
+              placeholder="e.g. AI · React"
+              value={role}
+              onChange={(event) => setRole(event.target.value)}
+              maxLength={40}
+            />
+          </div>
+        </div>
       </div>
 
-      {/* ── Designation / Stack field ─────────────────────────────── */}
-      <div>
-        <label htmlFor="landing-role" className="form-section-label">
-          Designation / Stack
-        </label>
-        <input
-          id="landing-role"
-          type="text"
-          className="form-input"
-          placeholder="e.g. Full-stack builder"
-          value={role}
-          onChange={(e) => setRole(e.target.value)}
-          maxLength={50}
-        />
-      </div>
+      <p className="form-validation" aria-live="polite">
+        {photo
+          ? 'Photo ready — we’ll frame it automatically.'
+          : 'Add a photo to create your graphic.'}
+      </p>
 
-      {/* ── Validation hint ───────────────────────────────────────── */}
-      {!photo ? <p className="form-validation">Add a photo to continue.</p> : null}
-
-      {/* ── Continue button ───────────────────────────────────────── */}
       <button
         type="button"
         className="form-submit"
@@ -165,20 +257,20 @@ export function LandingForm({
         onClick={handleSubmit}
         id="continue-btn"
       >
-        Continue
+        <span>Create my graphic</span>
+        <span aria-hidden>→</span>
       </button>
 
-      {/* ── Hidden file inputs ────────────────────────────────────── */}
       <input
         ref={fileRef}
         id={fileInputId}
         type="file"
         accept={ACCEPTED_FILE_TYPES}
         className="sr-only"
-        onChange={(e) => {
-          const file = e.target.files?.[0]
+        onChange={(event) => {
+          const file = event.target.files?.[0]
           if (file) handleFileSelected(file)
-          e.target.value = ''
+          event.target.value = ''
         }}
       />
       <input
@@ -188,10 +280,10 @@ export function LandingForm({
         accept="image/*"
         capture="user"
         className="sr-only"
-        onChange={(e) => {
-          const file = e.target.files?.[0]
+        onChange={(event) => {
+          const file = event.target.files?.[0]
           if (file) handleFileSelected(file)
-          e.target.value = ''
+          event.target.value = ''
         }}
       />
     </div>
