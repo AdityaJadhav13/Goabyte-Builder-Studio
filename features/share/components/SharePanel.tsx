@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import type { ExportedGraphic } from '@/features/editor/editor-state'
 import type { PreparationStatus } from '@/features/editor/use-prepared-graphic'
-import { saveBlob } from '@/features/export/download'
 import { DESIGN, type OutputFormat } from '@/features/render/types'
 import { captionForFormat, REQUIRED_HASHTAG } from '../share-copy'
 import {
@@ -194,14 +193,6 @@ export function SharePanel({
         <Button variant="secondary" onClick={handleCaptionCopy}>
           {captionCopied ? 'Caption copied' : 'Copy caption'}
         </Button>
-        {graphic ? (
-          <Button
-            variant="secondary"
-            onClick={() => saveBlob(graphic.file, graphic.file.name)}
-          >
-            Download PNG
-          </Button>
-        ) : null}
       </div>
 
       {preparation === 'error' ? (

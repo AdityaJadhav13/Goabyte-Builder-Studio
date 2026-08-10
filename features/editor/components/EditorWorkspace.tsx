@@ -184,64 +184,6 @@ export function EditorWorkspace({
           ) : null}
 
           {state.exportError ? <InlineError error={state.exportError} /> : null}
-
-          <div className="editor-action-card">
-            <p className="editor-section-kicker">Ready when you are</p>
-            {!ready ? (
-              <p className="editor-required-message">
-                {isCrew
-                  ? 'Add the leader name, role and crew name to prepare this Crew Frame.'
-                  : 'Add your name, stack and team to prepare your Builder ID.'}
-              </p>
-            ) : null}
-            <div className="editor-action-row">
-              <Button
-                className="editor-download-button"
-                onClick={() => {
-                  if (prepared.graphic) {
-                    saveBlob(prepared.graphic.file, prepared.graphic.file.name)
-                  }
-                }}
-                disabled={!prepared.graphic || prepared.status !== 'ready'}
-              >
-                <span>
-                  {prepared.status === 'preparing'
-                    ? 'Preparing PNG…'
-                    : prepared.graphic
-                      ? isBuilder
-                        ? `Download ${cardSide === 'front' ? 'Front' : 'Back'}`
-                        : 'Download PNG'
-                      : 'Complete the details'}
-                </span>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden>
-                  <path d="M12 3v12m0 0 5-5m-5 5-5-5M5 21h14" />
-                </svg>
-              </Button>
-              <ReplacePhotoButton
-                onFile={editor.selectFile}
-                disabled={state.isExporting}
-              />
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  editor.startOver()
-                  onReturnHome?.()
-                }}
-                disabled={state.isExporting}
-              >
-                Start over
-              </Button>
-            </div>
-          </div>
-
-          <SharePanel
-            graphic={prepared.graphic}
-            format={format}
-            preparation={prepared.status}
-            error={prepared.error}
-            name={fields.name}
-            team={isCrew ? crew.teamName : fields.team}
-          />
         </aside>
 
         <section className="editor-preview-stage">
@@ -302,6 +244,72 @@ export function EditorWorkspace({
               larger photo or less zoom will look sharper.
             </p>
           ) : null}
+
+          {/*
+            Actions and sharing live UNDER the canvas rather than in the left
+            rail. The rail already carried the photo and identity controls,
+            while the space below the graphic sat empty — and the result is
+            what people act on, so the actions belong beside it.
+          */}
+          <div className="editor-output-actions">
+            <div className="editor-action-card">
+              <p className="editor-section-kicker">Ready when you are</p>
+              {!ready ? (
+                <p className="editor-required-message">
+                  {isCrew
+                    ? 'Add the leader name, role and crew name to prepare this Crew Frame.'
+                    : 'Add your name, stack and team to prepare your Builder ID.'}
+                </p>
+              ) : null}
+              <div className="editor-action-row">
+                <Button
+                  className="editor-download-button"
+                  onClick={() => {
+                    if (prepared.graphic) {
+                      saveBlob(prepared.graphic.file, prepared.graphic.file.name)
+                    }
+                  }}
+                  disabled={!prepared.graphic || prepared.status !== 'ready'}
+                >
+                  <span>
+                    {prepared.status === 'preparing'
+                      ? 'Preparing PNG…'
+                      : prepared.graphic
+                        ? isBuilder
+                          ? `Download ${cardSide === 'front' ? 'Front' : 'Back'}`
+                          : 'Download PNG'
+                        : 'Complete the details'}
+                  </span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden>
+                    <path d="M12 3v12m0 0 5-5m-5 5-5-5M5 21h14" />
+                  </svg>
+                </Button>
+                <ReplacePhotoButton
+                  onFile={editor.selectFile}
+                  disabled={state.isExporting}
+                />
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    editor.startOver()
+                    onReturnHome?.()
+                  }}
+                  disabled={state.isExporting}
+                >
+                  Start over
+                </Button>
+              </div>
+            </div>
+
+            <SharePanel
+              graphic={prepared.graphic}
+              format={format}
+              preparation={prepared.status}
+              error={prepared.error}
+              name={fields.name}
+              team={isCrew ? crew.teamName : fields.team}
+            />
+          </div>
         </section>
       </div>
     </section>

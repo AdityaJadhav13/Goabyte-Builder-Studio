@@ -5,6 +5,7 @@ import { useState, useCallback } from 'react'
 import { Hero } from '@/components/layout/Hero'
 import { LandingForm } from '@/components/layout/LandingForm'
 import { AboutUs } from '@/components/layout/AboutUs'
+import { CraftShowcase } from '@/components/layout/CraftShowcase'
 
 const EditorShell = dynamic(
   () =>
@@ -136,6 +137,8 @@ export default function Home() {
           <span aria-hidden="true">↓</span>
         </a>
       </footer>
+
+      <CraftShowcase />
 
       <AboutUs />
     </div>

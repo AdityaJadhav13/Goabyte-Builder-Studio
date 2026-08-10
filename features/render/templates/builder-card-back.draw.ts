@@ -15,6 +15,7 @@ import {
 } from '@/lib/canvas/poster-motifs'
 import type { RenderAssets, RenderModel, RenderTarget } from '../types'
 import { BUILDER_CARD_BACK_LAYOUT as L } from './builder-card-back.layout'
+import { mascotThemeFor, type MascotTheme } from './mascot-theme'
 
 interface TextStyle {
   readonly fontFamily: string
@@ -245,7 +246,12 @@ function drawCodeMark(ctx: CanvasRenderingContext2D): void {
  * Original Goa crew-builder astronaut, constructed entirely from Canvas paths.
  * There is no downloaded character art, logo tracing, or third-party avatar.
  */
-function drawMascot(ctx: CanvasRenderingContext2D): void {
+/**
+ * The mascot carries the per-title colourway. Layout stays fixed; only the
+ * four themed tokens change, so a Founder and a Protocol Researcher share a
+ * silhouette but never a colourway.
+ */
+function drawMascot(ctx: CanvasRenderingContext2D, theme: MascotTheme): void {
   const mascot = L.mascot
 
   drawCircle(
@@ -262,7 +268,7 @@ function drawMascot(ctx: CanvasRenderingContext2D): void {
     mascot.sun.radius,
     mascot.sun.rayLength,
     mascot.sun.rayCount,
-    colorOf(mascot.sun.fill),
+    colorOf(theme.halo),
     colorOf(mascot.sun.ink),
     mascot.sun.strokeWidth,
   )
@@ -322,7 +328,7 @@ function drawMascot(ctx: CanvasRenderingContext2D): void {
     ctx,
     mascot.helmetBand.rect,
     mascot.helmetBand.radius,
-    colorOf(mascot.helmetBand.fill),
+    colorOf(theme.suit),
     colorOf(mascot.helmetBand.stroke),
     mascot.helmetBand.borderWidth,
   )
@@ -330,7 +336,7 @@ function drawMascot(ctx: CanvasRenderingContext2D): void {
     ctx,
     mascot.visor.rect,
     mascot.visor.radius,
-    colorOf(mascot.visor.fill),
+    colorOf(theme.visor),
     colorOf(mascot.visor.stroke),
     mascot.visor.borderWidth,
   )
@@ -466,7 +472,7 @@ export function drawBuilderCardBack(
   drawBackground(ctx)
   drawHeader(ctx)
   drawMotifs(ctx)
-  drawMascot(ctx)
+  drawMascot(ctx, mascotThemeFor(model.fields?.title))
   drawIdentity(ctx, name, title)
   drawCampaign(ctx)
 

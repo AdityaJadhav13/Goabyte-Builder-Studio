@@ -23,8 +23,8 @@ const TEAM = [
     role: 'Product design · Visual QA',
     detail:
       'Shapes the brand system, interaction design, export templates and final visual polish.',
-    linkedin: 'https://www.linkedin.com/search/results/people/?keywords=Lavitra%20Satam',
-    linkLabel: 'Find Lavitra on LinkedIn',
+    linkedin: 'https://www.linkedin.com/in/lavitra-satam-536521336/',
+    linkLabel: 'Lavitra on LinkedIn',
   },
 ] as const
 
