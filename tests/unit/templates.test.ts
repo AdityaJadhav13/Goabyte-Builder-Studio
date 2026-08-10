@@ -9,11 +9,13 @@ import {
 import { PFP_FRAMES } from '@/features/render/frame-catalog'
 import { renderTemplate } from '@/features/render/render-template'
 import { CARD_LAYOUT } from '@/features/render/templates/builder-card.layout'
+import { BUILDER_CARD_BACK_LAYOUT } from '@/features/render/templates/builder-card-back.layout'
 import { CREW_LAYOUT } from '@/features/render/templates/crew.layout'
 import { PFP_LAYOUT } from '@/features/render/templates/pfp.layout'
 import {
   DESIGN,
   type BuilderFields,
+  type CardSide,
   type CrewFields,
   type OutputFormat,
   type PfpFrameId,
@@ -62,6 +64,7 @@ function model(
   fields: BuilderFields | null = null,
   pfpFrame: PfpFrameId = 'postcard',
   crew: CrewFields | null = format === 'crew' ? CREW : null,
+  cardSide: CardSide = 'front',
 ): RenderModel {
   return {
     format,
@@ -83,6 +86,7 @@ function model(
     fields,
     pfpFrame,
     crew,
+    cardSide,
   }
 }
 
@@ -93,9 +97,14 @@ function render(
   assets = ASSETS,
   pfpFrame: PfpFrameId = 'postcard',
   crew: CrewFields | null = format === 'crew' ? CREW : null,
+  cardSide: CardSide = 'front',
 ) {
   const rec = createRecordingContext()
-  renderTemplate({ ctx: rec.ctx, scale }, model(format, fields, pfpFrame, crew), assets)
+  renderTemplate(
+    { ctx: rec.ctx, scale },
+    model(format, fields, pfpFrame, crew, cardSide),
+    assets,
+  )
   return rec
 }
 
@@ -119,6 +128,25 @@ describe('preview/export parity — every format (NFR-036, D-2)', () => {
       expect(strip(render(format, 0.45, FIELDS))).toEqual(
         strip(render(format, 1, FIELDS)),
       )
+    },
+  )
+
+  it.each<CardSide>(['front', 'back'])(
+    'Builder ID %s emits identical drawing calls at preview and export scale',
+    (side) => {
+      const strip = (rec: ReturnType<typeof render>) =>
+        rec.calls
+          .filter((call) => call.method !== 'setTransform')
+          .map((call) => ({
+            method: call.method,
+            args: call.args,
+            fill: call.fillStyle,
+            stroke: call.strokeStyle,
+          }))
+
+      expect(
+        strip(render('builder-card', 0.45, FIELDS, ASSETS, 'postcard', null, side)),
+      ).toEqual(strip(render('builder-card', 1, FIELDS, ASSETS, 'postcard', null, side)))
     },
   )
 
@@ -194,7 +222,7 @@ describe('vintage Goa PFP', () => {
 
   it('carries exact GoaByte branding and the required hashtag', () => {
     const text = textOf(render('pfp')).join(' ')
-    expect(text).toContain('HH GOA 2026')
+    expect(text).toContain('HACKER HOUSE GOA 2026')
     expect(text).toContain('GOABYTE')
     expect(text).toContain(REQUIRED_HASHTAG)
   })
@@ -229,8 +257,56 @@ describe('vintage Goa Builder ID', () => {
     const text = textOf(render('builder-card', 1, FIELDS))
     expect(text).toContain('HACKER HOUSE')
     expect(text).toContain('GOA 2026')
-    expect(text).toContain('OFFICIAL BUILDER CREDENTIAL')
+    expect(text).toContain('BUILDER AT HACKER HOUSE GOA 2026')
     expect(text).toContain('28–31 OCT · GOA')
+  })
+
+  it('dispatches a deterministic, personalized Canvas back', () => {
+    const back = render('builder-card', 1, FIELDS, ASSETS, 'postcard', null, 'back')
+    const repeated = render('builder-card', 1, FIELDS, ASSETS, 'postcard', null, 'back')
+    const text = textOf(back).join(' ')
+
+    expect(BUILDER_CARD_BACK_LAYOUT.canvas).toEqual(DESIGN['builder-card'])
+    expect(text).toContain('HACKER HOUSE GOA 2026')
+    expect(text).toContain('ADITYA JADHAV')
+    expect(text).toContain('SHIPS ON DEADLINE')
+    expect(text).toContain('BUILD · SHIP · GOA')
+    expect(text).toContain(REQUIRED_HASHTAG)
+    expect(text).toContain('GOABYTE BUILDER STUDIO')
+    expect(back.callsOf('drawImage')).toHaveLength(0)
+    expect(back.callsOf('bezierCurveTo').length).toBeGreaterThan(2)
+    expect(back.calls).toEqual(repeated.calls)
+  })
+
+  it('keeps the code-drawn avatar and personalized identity inside the back safe region', () => {
+    const { safeRegion, avatarRegion, nameRegion, titleRegion } = BUILDER_CARD_BACK_LAYOUT
+    for (const region of [avatarRegion, nameRegion, titleRegion]) {
+      expect(region.x).toBeGreaterThanOrEqual(safeRegion.left)
+      expect(region.y).toBeGreaterThanOrEqual(safeRegion.top)
+      expect(region.x + region.width).toBeLessThanOrEqual(safeRegion.right)
+      expect(region.y + region.height).toBeLessThanOrEqual(safeRegion.bottom)
+    }
+  })
+
+  it('fits the longest canonical title and never draws webpage controls into either side', () => {
+    const longFields = { ...FIELDS, title: 'Web3 Security Researcher' }
+    const frontText = textOf(render('builder-card', 1, longFields)).join(' ')
+    const backText = textOf(
+      render('builder-card', 1, longFields, ASSETS, 'postcard', null, 'back'),
+    ).join(' ')
+
+    expect(frontText).toContain('WEB3 SECURITY RESEARCHER')
+    expect(backText).toContain('WEB3 SECURITY RESEARCHER')
+    for (const renderedText of [frontText, backText]) {
+      expect(renderedText).not.toMatch(/Flip to|Download|Post on X/i)
+    }
+  })
+
+  it('front and back are distinct compositions at the same dimensions', () => {
+    const front = render('builder-card', 1, FIELDS)
+    const back = render('builder-card', 1, FIELDS, ASSETS, 'postcard', null, 'back')
+    expect(front.calls).not.toEqual(back.calls)
+    expect(CARD_LAYOUT.canvas).toEqual(BUILDER_CARD_BACK_LAYOUT.canvas)
   })
 
   it('paints the real QR matrix and keeps it in the dedicated plaque', () => {
@@ -281,6 +357,7 @@ describe('GoaByte Crew Frame', () => {
 
   it('renders the team, lead builder and required campaign hashtag', () => {
     const text = textOf(render('crew', 1, FIELDS)).join(' ')
+    expect(text).toContain('HACKER HOUSE GOA 2026')
     expect(text).toContain('GOABYTE CREW')
     expect(text).toContain('Aditya Jadhav')
     expect(text).toContain('BACKEND · ARCHITECTURE')
@@ -292,6 +369,7 @@ describe('layout configuration invariants', () => {
   it('each layout matches its declared export size', () => {
     expect(PFP_LAYOUT.canvas).toEqual(DESIGN.pfp)
     expect(CARD_LAYOUT.canvas).toEqual(DESIGN['builder-card'])
+    expect(BUILDER_CARD_BACK_LAYOUT.canvas).toEqual(DESIGN['builder-card'])
     expect(CREW_LAYOUT.canvas).toEqual(DESIGN.crew)
   })
 

@@ -1,7 +1,7 @@
 # ARCHITECTURE — GoaByte Builder Studio
 
-**Version:** v0.1 · 7 August 2026
-**Owner:** Aditya · **Implements:** `PRD.md` v0.2 (§13 decisions D-1 … D-8 are binding here)
+**Version:** v0.2 · 10 August 2026
+**Owner:** Aditya · **Implements:** `PRD.md` v0.3 (§13 decisions through D-10 are binding here)
 **Status:** For review. Sections marked **PROVISIONAL** are gated on Day-0 spikes (`PRD.md` §11.1).
 
 ---
@@ -35,7 +35,7 @@ The application is a **fully client-side image compositor** delivered as a stati
 │                                                              │           │
 │                                                              ▼           │
 │  ┌────────────────┐        ┌─────────────────────────────────────────┐   │
-│  │  EDITOR STATE  │◄──────►│  crop · format · fields · variant       │   │
+│  │  EDITOR STATE  │◄──────►│  framing · format · fields · variant    │   │
 │  │  (useReducer,  │        └─────────────────────────────────────────┘   │
 │  │   discriminated│                          │                           │
 │  │   union)       │                          ▼                           │
@@ -59,17 +59,18 @@ The application is a **fully client-side image compositor** delivered as a stati
 │           │                            │                                 │
 │           ▼                            ▼                                 │
 │      React UI                     PNG Blob ──► download                  │
-│                                            └──► Web Share / X intent     │
+│   (CSS card flip)                          └──► Web Share / X intent     │
 └──────────────────────────────────────────────────────────────────────────┘
 
         Network boundary: static assets in, nothing out.
 ```
 
-Three structural commitments follow from this diagram, and everything else is detail:
+Four structural commitments follow from this diagram, and everything else is detail:
 
 1. **One canonical image.** The decode pipeline produces exactly one `NormalizedImage` per upload. Nothing downstream re-reads the original file, re-applies orientation, or holds a second full-resolution decode. This is what makes iOS survivable (`R1`, `NFR-007`).
 2. **One renderer, two scales.** Preview and export call the identical function. Divergence is not a bug we test for; it is a state the architecture cannot represent (D-2).
 3. **One direction of dependency.** `app/ → features/ → lib/`. Never backwards. §4.
+4. **Two card faces, one image engine.** `CardSide` dispatches front or back inside the existing synchronous Canvas renderer. CSS animates only the webpage shell; it never becomes artwork.
 
 ---
 
@@ -88,21 +89,23 @@ goabyte-builder-studio/
 │
 ├─ features/
 │  ├─ editor/
-│  │  ├─ EditorProvider.tsx         # useReducer + context, the only shared state
+│  │  ├─ use-editor-controller.ts   # reducer orchestration + resource ownership
 │  │  ├─ editor-machine.ts          # pure reducer — no React import
 │  │  ├─ editor-state.ts            # discriminated union + guards
-│  │  └─ components/                # EditorShell, FormatSelector, Toolbar…
+│  │  └─ components/                # EditorWorkspace + CSS flip preview shell
 │  ├─ upload/
 │  │  ├─ components/UploadDropzone.tsx
-│  │  ├─ validate-file.ts           # magic-byte sniffing, size/dimension gates
-│  │  └─ use-upload.ts
+│  │  ├─ validate-file.ts           # magic-byte sniffing + byte-size gate
+│  │  └─ validate-decoded-image.ts  # intrinsic-dimension and quality gates
 │  ├─ render/                       # [Δ] merged from features/pfp + features/builder-card
 │  │  ├─ render-template.ts         # single entry point — pure, synchronous
 │  │  ├─ templates/
 │  │  │  ├─ pfp.layout.ts           # layout CONFIG only, zero drawing code
 │  │  │  ├─ pfp.draw.ts
 │  │  │  ├─ builder-card.layout.ts
-│  │  │  └─ builder-card.draw.ts
+│  │  │  ├─ builder-card.draw.ts    # front + CardSide dispatch
+│  │  │  ├─ builder-card-back.layout.ts
+│  │  │  └─ builder-card-back.draw.ts # original code-drawn reverse
 │  │  ├─ assets.ts                  # preload + cache frame art as ImageBitmap
 │  │  ├─ fonts.ts                   # explicit document.fonts.load() per face
 │  │  └─ types.ts                   # RenderModel, RenderTarget, LayoutSpec
@@ -131,12 +134,13 @@ goabyte-builder-studio/
 │  ├─ browser/
 │  │  └─ capabilities.ts            # feature detection, never UA sniffing
 │  ├─ brand/
-│  │  └─ palette.ts                 # TS mirror of @theme, parity-tested §15
+│  │  ├─ palette.ts                 # TS mirror of @theme, parity-tested §15
+│  │  └─ campaign.ts                # exact HACKER HOUSE GOA 2026 lockup
 │  └─ errors/
 │     └─ app-error.ts               # error taxonomy §13
 │
 ├─ components/ui/                   # buttons, inputs, toast — hand-styled
-├─ public/{fonts,frames,textures}/
+├─ public/{fonts,brand}/
 ├─ tests/{unit,e2e}/
 └─ docs/
 ```
@@ -213,6 +217,9 @@ export interface CropRect {
 // ─── features/render/types.ts ─────────────────────────────────────────────
 export type OutputFormat = 'pfp' | 'builder-card' | 'crew'
 export type PfpFrameId = 'heritage' | 'postcard' | 'midnight'
+export type CardSide = 'front' | 'back'
+export const CARD_SIDES: readonly CardSide[] = ['front', 'back']
+export const DEFAULT_CARD_SIDE: CardSide = 'front'
 
 export interface BuilderFields {
   readonly name: string
@@ -234,6 +241,7 @@ export interface RenderModel {
   readonly fields: BuilderFields | null // null for 'pfp'
   readonly pfpFrame: PfpFrameId
   readonly crew: CrewFields | null // non-null only for 'crew'
+  readonly cardSide: CardSide // used only for 'builder-card'
 }
 
 export interface RenderTarget {
@@ -284,7 +292,10 @@ export interface ExportResult {
   readonly fileName: string
   readonly durationMs: number
 }
-export function exportPng(model: RenderModel): Promise<ExportResult>
+export function exportPng(
+  model: RenderModel,
+  subject?: string | null,
+): Promise<ExportResult>
 ```
 
 **Design-space constants** (`features/render/types.ts`) — the only place these numbers exist:
@@ -307,7 +318,7 @@ export const PREVIEW_DPR_CAP = 2 // FR-039
 
 ## 6. The design-space coordinate system
 
-**All layout is authored in design units.** The PFP design space is 1080×1080, the Builder ID is 1080×1350, and the Crew Frame is a true 2048×1362 landscape canvas. Layout configs contain design units and nothing else — no device pixels, no CSS pixels, no percentages of a container.
+**All layout is authored in design units.** The PFP design space is 1080×1080, both Builder ID faces share the same 1080×1350 design space, and the Crew Frame is a true 2048×1362 landscape canvas. Layout configs contain design units and nothing else — no device pixels, no CSS pixels, no percentages of a container.
 
 The renderer applies exactly one transform at entry:
 
@@ -374,36 +385,49 @@ NormalizedImage ◄────────────────────�
 
 ## 8. Editor state — `features/editor/`
 
-Plain `useReducer` in a single context provider (locked stack; no Zustand, no Redux). The refinement over the shape sketched in `NITIN.md` §6 is that state is a **discriminated union**, not a flat object with nullable fields.
+Plain `useReducer` inside `use-editor-controller.ts` (locked stack; no context framework, Zustand or Redux). The state is a **discriminated union**, not a flat object with nullable fields.
 
 ```ts
 export type EditorState =
   | { phase: 'idle' }
-  | { phase: 'decoding'; fileName: string }
-  | { phase: 'error'; error: AppError; canRetry: boolean }
+  | { phase: 'preparing'; stage: PreparationStage; fileName: string }
+  | { phase: 'error'; error: AppError; fileName: string | null }
   | {
       phase: 'editing'
       image: NormalizedImage
+      assets: RenderAssets
       format: OutputFormat
       crops: Record<OutputFormat, CropRect> // per-format, FR-019 / FR-058
       fields: BuilderFields
-      variant: string
+      pfpFrame: PfpFrameId
+      crew: CrewFields
       quality: 'ok' | 'soft' // FR-062
+      isExporting: boolean
+      exportError: AppError | null
+      exported: ExportedGraphic | null
     }
-  | { phase: 'exporting'; previous: Extract<EditorState, { phase: 'editing' }> }
 ```
 
 _Why._ The flat shape in `NITIN.md` allows `status: 'ready'` alongside `sourceFile: null` — a state that is meaningless but representable, which means every consumer must defensively handle it and one consumer eventually will not. Under the union, `state.image` only exists where an image provably exists. The compiler enforces what would otherwise be a convention.
 
-_Trade-off._ Transitions must reconstruct rather than patch a field, and `exporting` carries `previous` so it can return without re-deriving. Slightly more verbose to write, considerably harder to get wrong.
+_Trade-off._ Transitions reconstruct rather than patch phases. Export status remains inside `editing`, so a transient export failure cannot discard a valid normalized image or force another upload.
 
-_Notes._ `crops` is keyed by format so switching PFP ↔ Builder ID preserves both (`FR-058`). Every transition out of a phase holding an image calls `release()` — centralised in the reducer's transition handling, never left to component cleanup, because component cleanup is where leaks hide.
+_Notes._ `crops` is keyed by format so switching PFP ↔ Builder ID preserves both (`FR-058`). The reducer stays pure; `use-editor-controller.ts` owns the resource slots and releases images/blob URLs on replacement, start-over and unmount.
 
-### 8.1 Render readiness is explicit, never implicit
+### 8.1 Builder ID side is local presentation state
+
+`EditorWorkspace` owns `cardSide` with `useState<CardSide>('front')`; it resets to `front` when Builder ID is selected and is deliberately absent from the editor reducer, storage and URL. The value has two narrowly separated jobs:
+
+1. `BuilderCardFlipPreview` derives front and back models from the same current image, framing and fields, then uses CSS `perspective`, `preserve-3d`, `rotateY(180deg)` and `backface-visibility` to reveal one equal-size Canvas face. The native button, `aria-pressed` state and polite side announcement live outside both canvases. Reduced motion removes only the transition.
+2. The current value is copied into `RenderModel.cardSide`, so the existing renderer, prepared-PNG hook, download and share paths select the same face the user can see. A side change invalidates the old blob URL and prepares a newly named PNG.
+
+There is no WebGL, Three.js, DOM-to-image capture, draggable rotation, persistence or second state machine. CSS owns the transition; Canvas owns every exported pixel.
+
+### 8.2 Render readiness is explicit, never implicit
 
 Because the renderer is synchronous (ADR-4), **the frontend owns the question "are we allowed to render yet?"** That question must be answered by a visible state, not by a promise hidden inside a component.
 
-The `decoding` phase above therefore decomposes into named stages:
+The `preparing` phase above therefore decomposes into named stages:
 
 ```ts
 type Preparation =
@@ -421,7 +445,8 @@ Each stage is user-visible copy, which is not incidental — `NITIN.md` §4 requ
 | ---------------------------------------- | ---------------------------------------------------------------------- |
 | a normalized image exists                | being in `phase: 'editing'` — `image` does not exist in other phases   |
 | the crop is valid                        | `clampCrop` at the boundary; out-of-bounds is unrepresentable (FR-020) |
-| the model is complete                    | `RenderModel` requires `fields` for `builder-card`                     |
+| required identity fields are complete    | `canExport(state)` gates Builder ID/Crew preparation                   |
+| the selected card face is valid          | closed `CardSide` union on `RenderModel`                               |
 | fonts for the active template are loaded | holding a `RenderAssets` value (FR-043)                                |
 | decorative art is decoded                | same value (FR-044)                                                    |
 
@@ -497,19 +522,22 @@ Fonts are open-licence (OFL) per D-1. `ensureFontsReady()` is awaited before the
 
 ```ts
 // features/export/export-png.ts
-export async function exportPng(model: RenderModel): Promise<ExportResult> {
+export async function exportPng(
+  model: RenderModel,
+  subject?: string | null,
+): Promise<ExportResult> {
   // ── async preparation: the ONLY awaits in the render path ──────────────
   const assets = await prepareRenderAssets(model.format) // FR-043, FR-044
 
   // ── synchronous render: deterministic, profileable, testable ───────────
   const { width, height } = DESIGN[model.format]
-  const canvas = createCanvas(width, height) // Offscreen where available
-  const ctx = canvas.getContext('2d', { alpha: false })!
+  const surface = createSurface(width, height)
 
-  renderTemplate({ ctx, scale: 1 }, model, assets)
+  renderTemplate({ ctx: surface.ctx, scale: 1 }, model, assets)
 
-  const blob = await toBlob(canvas, 'image/png') // FR-042
-  return { blob, width, height, fileName: buildFileName(model), durationMs }
+  const blob = await toPngBlob(surface.canvas) // FR-042
+  const fileName = buildFileName(model.format, subject, model.cardSide)
+  return { blob, width, height, fileName, durationMs }
 }
 ```
 
@@ -533,6 +561,12 @@ A renderer that could `await` could interleave with a state change and produce a
 
 **Assets are preloaded into `ImageBitmap`s once and cached** (`FR-044`). All are same-origin from `public/`, so the canvas is never tainted and `toBlob` cannot throw a security error (`FR-045`). No remote asset is ever drawn — which is also one of the mechanisms `NFR-037` prohibits.
 
+**Builder ID side dispatch stays inside the template module.** `renderTemplate` still has one `builder-card` branch; `drawBuilderCard` delegates to the established front or `drawBuilderCardBack` from `model.cardSide`. Both layout configs read `DESIGN['builder-card']`, so unequal faces cannot be introduced by a CSS measurement. The full `HACKER HOUSE GOA 2026` identity is an output invariant across PFP, both card faces and Crew Frame; the shared campaign constant prevents abbreviated-only PFP/Crew regressions.
+
+**The reverse has no image-asset dependency.** Its original crew-builder astronaut, visor, console/code mark, sun, palms, waves, halftone and sparkles are assembled from shared Canvas primitives and named layout coordinates. It uses only local fonts and palette tokens, does not call `drawImage`, and performs no fetch, decode or async work. `RenderAssets` remains in the shared signature, but the back intentionally does not consume external character artwork.
+
+**Builder titles have one source of truth.** `features/builder-title/suggest-title.ts` owns 14 immutable `{ id, label, description }` records. The form maps those records into the selector and helper copy; the FNV-1a name hash returns a canonical label; “Try another” advances predictably through the same array; front and back receive the selected label through `BuilderFields`. No component duplicates the strings and no title path calls AI, randomness or the network.
+
 **Text fitting** — `lib/canvas/fit-text.ts` implements `FR-028`/`FR-029`/`FR-030`:
 
 ```
@@ -545,6 +579,8 @@ measure at design size
 Grapheme-safe truncation uses `Intl.Segmenter` (Safari 14.1+, Chrome 87+ — within our support matrix). Slicing by UTF-16 code unit splits emoji ZWJ sequences and Devanagari clusters, producing the exact tofu-and-clipping failure `FR-030` forbids. Floors and line limits are per-field values in the layout config, not constants in the fitting code — the algorithm is shared, the policy is per-template.
 
 **Preview** runs the same `renderTemplate` at computed scale, coalesced into `requestAnimationFrame`, debounced ~120 ms on text input (`FR-040`). A render token guards against out-of-order completion so rapid format toggling cannot leave a stale frame (`§8` edge case).
+
+**Builder ID exports are side-aware without a second export path.** The visible side is already part of the model passed to `exportPng`; filenames become `hhgoa-2026-{slug}-builder-id-front.png` or `…-builder-id-back.png`. The output remains a direct 1080×1350 Canvas render. Neither the CSS transform nor the Flip/Download/Share controls are available to the renderer, so they cannot enter the PNG.
 
 **Download ladder** (`features/export/download.ts`) — **PROVISIONAL, gated on SPIKE-4**:
 
@@ -585,6 +621,8 @@ Three rules that are not negotiable:
 **Privileged actions start synchronously inside the click handler** (`FR-053`). Safari blocks `window.open` or `navigator.share` after transient user activation is lost. The native branch starts file sharing before awaiting its parallel caption-copy promise. The fallback opens a detectable blank tab first, detaches `opener`, and only then navigates it to X; passing `noopener` directly to `window.open` makes Chromium return `null` even when the tab opened, so that return value cannot distinguish a real block.
 
 **The caption always contains `#FrameInGoa`** (`FR-050`). `share-copy.ts` exports variants through one factory that appends the hashtag, and a unit test iterates every exported variant asserting the literal string. The submission is invalid without it; it gets a test, not a code review.
+
+**The shared file follows the visible Builder ID face** (`FR-071`). `usePreparedGraphic` depends on the whole current `RenderModel`, including `cardSide`; flipping revokes the stale object URL and prepares the other 1080×1350 PNG before share actions enable. Native share, PNG clipboard, download and the X attachment instructions therefore all refer to the same side-specific filename. Builder captions stay deliberately side-neutral and still pass through the hashtag factory.
 
 **We never claim an attachment that did not happen** (`FR-055`, master prompt §10). Each branch above states exactly what occurred. The honest branch is one sentence of UI copy and it is the difference between a product a judge trusts and one they catch lying.
 
@@ -661,11 +699,11 @@ Twenty lines. Turns "remember to update both" into a build failure. `styles/toke
 
 ### 16.1 What is worth testing in six days
 
-**Tested — pure logic, high defect probability, cheap to cover:** file validation and magic-byte sniffing · crop geometry, clamping, smart default, `effectiveResolution` · text fitting including grapheme truncation · filename sanitisation · share-copy hashtag invariant · builder-title determinism · token parity · layout config invariants (safe-region insets, floors below design sizes).
+**Tested — pure logic, high defect probability, cheap to cover:** file validation and magic-byte sniffing · framing geometry, clamping, smart default, `effectiveResolution` · text fitting including grapheme truncation · side-aware filename sanitisation · share-copy hashtag invariant · exact 14-record builder-title catalog, deterministic suggestion and cycling · front/back renderer dispatch and equal dimensions · original back-mascot geometry/provenance · full campaign lockup · token parity · layout config invariants (safe-region insets, floors below design sizes).
 
 **Not tested — deliberately:** pixel golden-files. High maintenance, brittle across platforms, and forbidden in spirit by D-5 — canvas output is implementation-dependent, so a pixel test would fail for reasons unrelated to our correctness. §16.2 gets the real signal at a fraction of the cost.
 
-**One E2E** (Playwright): upload fixture → crop → PFP → download → assert the file is a valid PNG at 1080×1080. The happy path is the submission; it gets a regression guard.
+**E2E coverage** (Playwright) follows the real flow: upload fixture → automatic frame → PFP/download, plus Builder ID front → flip → personalized back → side-specific 1080×1350 downloads. Responsive and reduced-motion cases exercise the same native button; no test reaches into animation state or screenshots the DOM as an export substitute.
 
 ### 16.2 Testing the renderer without pixels
 
@@ -704,15 +742,16 @@ Metadata, favicon, and a static hand-designed `opengraph-image.png` (S1-6) are c
 
 `NFR-037` says "photo never leaves your device" is architectural, not marketing. Concretely:
 
-| Mechanism                             | Status                                                                                         |
-| ------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| Upload endpoint                       | None exists. No route handlers in `app/`.                                                      |
-| Server-side rendering of user content | Impossible — renderer requires `CanvasRenderingContext2D`, never runs on server.               |
-| `next/image` on user content          | Not used. User photos are canvas-only, never `<img src>` through a loader.                     |
-| Third-party image / crop / face APIs  | None. Cropping is `react-easy-crop` (client), fitting is ours.                                 |
-| Error reporting (Sentry etc.)         | Not installed. `AppError.cause` has no transport.                                              |
-| Analytics carrying field values       | Vercel Analytics only if adopted — page-level, cookieless, no custom events with user content. |
-| Fonts / assets from a CDN             | None. All same-origin from `public/` — also what keeps the canvas untainted (FR-045).          |
+| Mechanism                             | Status                                                                                                 |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Upload endpoint                       | None exists. No route handlers in `app/`.                                                              |
+| Server-side rendering of user content | Impossible — renderer requires `CanvasRenderingContext2D`, never runs on server.                       |
+| `next/image` on user content          | Not used. User photos are canvas-only, never `<img src>` through a loader.                             |
+| Third-party image / crop / face APIs  | None. Automatic framing and optional X/Y/zoom controls are local pure geometry; no cropper dependency. |
+| Real-selfie requirement               | Communicated in upload/camera copy only; no biometric, face or AI-image classification is performed.   |
+| Error reporting (Sentry etc.)         | Not installed. `AppError.cause` has no transport.                                                      |
+| Analytics carrying field values       | Vercel Analytics only if adopted — page-level, cookieless, no custom events with user content.         |
+| Fonts / assets from a CDN             | None. All same-origin from `public/` — also what keeps the canvas untainted (FR-045).                  |
 
 A PR introducing any network call capable of carrying user content requires Aditya's sign-off and an amendment to `NFR-037`. The claim is true because there is no code path that could make it false.
 
@@ -732,9 +771,11 @@ Decisions already recorded as D-1 … D-8 in `PRD.md` §13 are binding and not r
 
 **ADR-5 — Recording-context renderer tests over pixel golden-files.** Covered in §16.2. _Why:_ asserts layout decisions, which is what we actually control, and satisfies D-5. _Alternative:_ `node-canvas` golden images — native dependency, platform-dependent output, high maintenance, wrong use of six days. _Trade-off:_ will not catch a purely visual regression; that is Lavitra's visual QA, which is better at it than a machine.
 
-**ADR-6 — Hand-styled UI primitives; Radix/shadcn only where accessibility is genuinely hard.** Taken for Tabs/segmented control, Dialog, and Toast; declined for buttons, inputs, cards. _Why:_ the brand is thick ink outlines and retro poster treatment — shadcn defaults would be overridden almost entirely, leaving dependency weight and no benefit. Where correct keyboard and ARIA semantics are hard to get right under time pressure, Radix earns its place. _Consistent with_ the locked stack's "shadcn/ui where useful."
+**ADR-6 — Hand-styled native UI primitives.** Buttons, inputs, the format radiogroup, camera dialog and status surfaces use platform semantics plus project styling; no component framework is installed. _Why:_ the brand is thick ink outlines and retro poster treatment, while native radio/button behavior already supplies the required keyboard model at zero bundle cost. A focused accessibility primitive may still earn a dependency later, but the shipped flow does not need one.
 
 **ADR-7 — `features/render/` is the only module allowed to know about output dimensions.** `DESIGN` is defined there and imported elsewhere; no component hard-codes 1080. _Why:_ dimensions appear in filenames, previews, quality warnings, and tests — four places that must never disagree.
+
+**ADR-8 — CSS flip shell, Canvas faces.** `CardSide` is local UI state copied into `RenderModel`; it is not persisted and does not expand the editor state machine. Two `PreviewCanvas` instances share the current data, while `rotateY` and `backface-visibility` provide the physical transition outside the artwork. _Why:_ Canvas on both sides preserves preview/export parity; CSS provides the only depth effect needed at negligible bundle cost. _Rejected:_ a DOM back, DOM screenshots, WebGL/Three.js, free rotation and animation libraries. _Accessibility:_ a native button, side-specific canvas descriptions, `aria-pressed`, a polite status message and a transition-free reduced-motion path.
 
 ---
 

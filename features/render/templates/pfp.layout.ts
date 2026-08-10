@@ -1,5 +1,6 @@
 import { FONT_STACK } from '../fonts'
 import { DESIGN } from '../types'
+import { HH_GOA_CAMPAIGN } from '@/lib/brand/campaign'
 
 /**
  * Text and photo registration for the generated square Goa plate.
@@ -27,8 +28,11 @@ export const PFP_LAYOUT = {
     fontFamily: FONT_STACK.display,
     fontWeight: 400,
     fontSize: 58,
+    minFontSize: 38,
+    maxLines: 1,
+    lineHeight: 60,
     letterSpacing: 1,
-    text: 'HH GOA 2026',
+    text: HH_GOA_CAMPAIGN,
   },
   topKicker: {
     centreX: 540,

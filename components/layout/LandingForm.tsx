@@ -202,7 +202,7 @@ export function LandingForm({
         onDrop={handleDrop}
       >
         <div className="form-section-heading">
-          <p className="form-section-label">1 · Add your photo</p>
+          <p className="form-section-label">1 · Add your real selfie</p>
           <span className="form-step-status">
             JPG · PNG · WEBP · HEIC · {MAX_FILE_MB} MB
           </span>
@@ -229,7 +229,9 @@ export function LandingForm({
             <p className="photo-drop-copy">
               {isDragActive ? 'Drop your photo here' : 'Drag and drop a photo here'}
             </p>
-            <p className="form-helper">or choose how you want to add it</p>
+            <p className="form-helper">
+              Use a real, current selfie, then choose how you want to add it.
+            </p>
 
             <div className="photo-buttons">
               <button
@@ -362,8 +364,8 @@ export function LandingForm({
 
       <p className="form-validation" aria-live="polite">
         {photo
-          ? 'Photo ready — we’ll frame it automatically.'
-          : 'Add a photo to create your graphic.'}
+          ? 'Selfie ready — we’ll frame it automatically.'
+          : 'Add your real selfie to create an HH Goa graphic.'}
       </p>
 
       <button

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { FONT_STACK, REQUIRED_FACES } from '@/features/render/fonts'
 import { PFP_LAYOUT } from '@/features/render/templates/pfp.layout'
 import { CARD_LAYOUT } from '@/features/render/templates/builder-card.layout'
+import { BUILDER_CARD_BACK_LAYOUT } from '@/features/render/templates/builder-card-back.layout'
 import { CREW_LAYOUT } from '@/features/render/templates/crew.layout'
 
 /**
@@ -30,6 +31,7 @@ function specsIn(layout: object): TypeSpec[] {
 const ALL_SPECS = [
   ...specsIn(PFP_LAYOUT),
   ...specsIn(CARD_LAYOUT),
+  ...specsIn(BUILDER_CARD_BACK_LAYOUT),
   ...specsIn(CREW_LAYOUT),
 ]
 

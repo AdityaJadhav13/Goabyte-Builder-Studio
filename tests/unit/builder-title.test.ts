@@ -20,8 +20,9 @@ describe('suggestTitle', () => {
   })
 
   it('always returns a title from the curated list', () => {
+    const labels = BUILDER_TITLES.map(({ label }) => label)
     for (const name of ['Aditya', 'आदित्य', '🚀', '', 'x'.repeat(200)]) {
-      expect(BUILDER_TITLES).toContain(suggestTitle(name))
+      expect(labels).toContain(suggestTitle(name))
     }
   })
 
@@ -32,30 +33,109 @@ describe('suggestTitle', () => {
   })
 
   it('handles an empty name without throwing', () => {
-    expect(BUILDER_TITLES).toContain(suggestTitle(''))
+    expect(suggestTitle('')).toBe(BUILDER_TITLES[0].label)
   })
 })
 
 describe('nextTitle', () => {
   it('advances through the list and wraps', () => {
-    expect(nextTitle(BUILDER_TITLES[0]!)).toBe(BUILDER_TITLES[1])
-    expect(nextTitle(BUILDER_TITLES.at(-1)!)).toBe(BUILDER_TITLES[0])
+    expect(nextTitle(BUILDER_TITLES[0].label)).toBe(BUILDER_TITLES[1].label)
+    expect(nextTitle(BUILDER_TITLES.at(-1)!.label)).toBe(BUILDER_TITLES[0].label)
   })
 
   it('falls back to the first entry for an unknown value', () => {
     // A user who typed their own title then hits "Try another".
-    expect(BUILDER_TITLES).toContain(nextTitle('something bespoke'))
+    expect(nextTitle('something bespoke')).toBe(BUILDER_TITLES[0].label)
   })
 })
 
 describe('the list itself', () => {
-  it('has no duplicates', () => {
-    expect(new Set(BUILDER_TITLES).size).toBe(BUILDER_TITLES.length)
+  it('contains the exact canonical 14 title records', () => {
+    expect(BUILDER_TITLES).toEqual([
+      {
+        id: 'protocol-builder',
+        label: 'Protocol Builder',
+        description: 'Blockchain protocols, smart contracts, infrastructure',
+      },
+      {
+        id: 'smart-contract-engineer',
+        label: 'Smart Contract Engineer',
+        description: 'Solidity/EVM contracts and on-chain logic',
+      },
+      {
+        id: 'web3-developer',
+        label: 'Web3 Developer',
+        description: 'DApps and blockchain integrations',
+      },
+      {
+        id: 'blockchain-architect',
+        label: 'Blockchain Architect',
+        description: 'Designing the technical architecture',
+      },
+      {
+        id: 'defi-builder',
+        label: 'DeFi Builder',
+        description: 'Decentralized finance protocols and applications',
+      },
+      {
+        id: 'dapp-builder',
+        label: 'dApp Builder',
+        description: 'Building decentralized applications',
+      },
+      {
+        id: 'web3-security-researcher',
+        label: 'Web3 Security Researcher',
+        description: 'Smart-contract security, exploits, audits',
+      },
+      {
+        id: 'ai-web3-builder',
+        label: 'AI × Web3 Builder',
+        description: 'Combining AI with blockchain',
+      },
+      {
+        id: 'frontend-engineer',
+        label: 'Frontend Engineer',
+        description: 'DApp interfaces and user experience',
+      },
+      {
+        id: 'backend-engineer',
+        label: 'Backend Engineer',
+        description: 'APIs, databases, indexing and off-chain systems',
+      },
+      {
+        id: 'product-builder',
+        label: 'Product Builder',
+        description: 'Turning the idea into a usable product',
+      },
+      {
+        id: 'protocol-researcher',
+        label: 'Protocol Researcher',
+        description: 'Cryptography, mechanisms, protocol research',
+      },
+      {
+        id: 'growth-community',
+        label: 'Growth & Community',
+        description: 'Community, adoption, partnerships',
+      },
+      {
+        id: 'founder',
+        label: 'Founder',
+        description: 'Product vision, business model and team direction',
+      },
+    ])
+    expect(BUILDER_TITLES).toHaveLength(14)
+  })
+
+  it('has no duplicate ids or labels', () => {
+    expect(new Set(BUILDER_TITLES.map(({ id }) => id)).size).toBe(BUILDER_TITLES.length)
+    expect(new Set(BUILDER_TITLES.map(({ label }) => label)).size).toBe(
+      BUILDER_TITLES.length,
+    )
   })
 
   it('stays within the card chip budget of 28 characters', () => {
-    for (const title of BUILDER_TITLES) {
-      expect(title.length, `"${title}" is too long for the chip`).toBeLessThanOrEqual(28)
+    for (const { label } of BUILDER_TITLES) {
+      expect(label.length, `"${label}" is too long for the chip`).toBeLessThanOrEqual(28)
     }
   })
 })

@@ -71,8 +71,8 @@ export function UploadDropzone({
         {isDragActive ? 'Drop it' : label}
       </span>
       <span className="max-w-sm text-sm leading-relaxed text-balance text-cream-dim">
-        Framed automatically — no cropping needed. Post it with{' '}
-        <span className="font-bold text-yellow">#FrameInGoa</span>.
+        Choose a real selfie. It is framed automatically — no cropping needed. Post it
+        with <span className="font-bold text-yellow">#FrameInGoa</span>.
       </span>
       <span className="text-xs text-cream-dim/70">
         JPG, PNG, WebP or HEIC · up to {Math.round(MAX_FILE_BYTES / 1024 / 1024)} MB

@@ -35,6 +35,26 @@ async function upload(page: Page, file: string) {
 const previewOf = (page: Page, size: string) =>
   page.getByRole('img', { name: new RegExp(`Preview at ${size}`) })
 
+type BuilderSide = 'front' | 'back'
+
+const builderPreview = (page: Page, side: BuilderSide) =>
+  page
+    .locator('.editor-preview-stage')
+    .getByRole('img', { name: new RegExp(`Builder ID ${side} preview`, 'i') })
+
+const builderCanvas = (page: Page, side: BuilderSide) =>
+  page.locator(`[data-card-face="${side}"] canvas`)
+
+async function flipBuilderTo(page: Page, side: BuilderSide) {
+  const action = side === 'back' ? 'Flip to Back' : 'Flip to Front'
+  await page.getByRole('button', { name: action }).click()
+  await expect(page.locator('.builder-card-flipper')).toHaveAttribute(
+    'data-card-side',
+    side,
+  )
+  await expect(builderPreview(page, side)).toBeVisible()
+}
+
 /**
  * Click the LABEL, as a real user does. The input itself is `sr-only` and so
  * has zero size — Playwright refuses to click it directly, but the native
@@ -56,7 +76,7 @@ async function download(page: Page) {
   ]).then(([d]) => d)
 }
 
-const sharePanel = (page: Page) => page.getByRole('region', { name: 'Post your build' })
+const sharePanel = (page: Page) => page.getByRole('region', { name: /post your build/i })
 
 async function expectPreparedShare(page: Page) {
   const share = sharePanel(page)
@@ -66,6 +86,31 @@ async function expectPreparedShare(page: Page) {
   })
   await expect(page.getByRole('button', { name: 'Post on X' })).toBeEnabled()
   return share
+}
+
+async function expectPreparedFile(page: Page, fileName: string) {
+  const share = sharePanel(page)
+  await expect(share.getByRole('img', { name: `Prepared ${fileName}` })).toBeVisible({
+    timeout: 30_000,
+  })
+  await expect(page.locator('.editor-download-button')).toBeEnabled()
+  return share
+}
+
+async function openCompletedBuilder(
+  page: Page,
+  title: 'AI × Web3 Builder' | 'Protocol Builder' = 'AI × Web3 Builder',
+) {
+  await upload(page, 'portrait.jpg')
+  await expect(previewOf(page, '1080×1080')).toBeVisible({ timeout: 20_000 })
+  await chooseFormat(page, 'Builder ID')
+  await page.getByLabel('Your name').fill('Aditya Jadhav')
+  await page.getByLabel('What you build').fill('Backend · Architecture')
+  await page.getByLabel('Builder title').selectOption({ label: title })
+  await expect(builderPreview(page, 'front')).toBeVisible()
+  await expect(page.locator('.editor-download-button')).toBeEnabled({
+    timeout: 30_000,
+  })
 }
 
 type IntentProbeMode = 'opened' | 'popup-blocked' | 'navigation-blocked'
@@ -143,16 +188,29 @@ test('all three formats swap output size while keeping the uploaded photo', asyn
   page,
 }) => {
   await upload(page, 'portrait.jpg')
-  await expect(previewOf(page, '1080×1080')).toBeVisible({ timeout: 20_000 })
+  const initialPfp = previewOf(page, '1080×1080')
+  await expect(initialPfp).toBeVisible({ timeout: 20_000 })
+  await expect
+    .poll(() => initialPfp.evaluate((canvas: HTMLCanvasElement) => canvas.width))
+    .toBeGreaterThan(300)
+  const initialPfpData = await initialPfp.evaluate((canvas: HTMLCanvasElement) =>
+    canvas.toDataURL(),
+  )
 
   await chooseFormat(page, 'Builder ID')
-  await expect(previewOf(page, '1080×1350')).toBeVisible()
+  await expect(builderPreview(page, 'front')).toBeVisible()
+  await flipBuilderTo(page, 'back')
 
   await chooseFormat(page, 'Crew frame')
   await expect(previewOf(page, '2048×1362')).toBeVisible()
 
   await chooseFormat(page, 'Profile picture')
-  await expect(previewOf(page, '1080×1080')).toBeVisible()
+  const restoredPfp = previewOf(page, '1080×1080')
+  await expect(restoredPfp).toBeVisible()
+  await expect
+    .poll(() => restoredPfp.evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL()))
+    .toBe(initialPfpData)
+  await expect(page.getByRole('button', { name: /Flip to/i })).toHaveCount(0)
 })
 
 test('selecting a different PFP frame changes the live canvas', async ({ page }) => {
@@ -198,23 +256,139 @@ test('Builder ID requires a name before it can be generated', async ({ page }) =
   })
 })
 
-test('Builder ID exports at exactly 1080×1350 with a name-based filename', async ({
+test('Builder ID starts on its personalized front and flips back and forth reliably', async ({
   page,
 }) => {
   test.setTimeout(90_000)
-  await upload(page, 'portrait.jpg')
-  await expect(previewOf(page, '1080×1080')).toBeVisible({ timeout: 20_000 })
+  await openCompletedBuilder(page)
 
-  await chooseFormat(page, 'Builder ID')
-  await page.getByLabel('Your name').fill('Aditya Jadhav')
-  await page.getByLabel('What you build').fill('Backend · Architecture')
-  await expect(page.locator('.editor-download-button')).toBeEnabled({
-    timeout: 30_000,
+  const flipper = page.locator('.builder-card-flipper')
+  const frontFace = page.locator('[data-card-face="front"]')
+  const backFace = page.locator('[data-card-face="back"]')
+  const frontCanvas = builderCanvas(page, 'front')
+  const backCanvas = builderCanvas(page, 'back')
+  const flipToBack = page.getByRole('button', { name: 'Flip to Back' })
+
+  await expect(flipper).toHaveAttribute('data-card-side', 'front')
+  await expect(frontFace).toHaveAttribute('aria-hidden', 'false')
+  await expect(backFace).toHaveAttribute('aria-hidden', 'true')
+  await expect(flipToBack).toHaveAttribute('type', 'button')
+  await expect(flipToBack).toHaveAttribute('aria-pressed', 'false')
+  await expect(builderPreview(page, 'front')).toHaveAccessibleName(
+    /Builder ID front preview for Aditya Jadhav, Backend · Architecture, team GoaByte/i,
+  )
+
+  const originalFront = await frontCanvas.evaluate((canvas: HTMLCanvasElement) =>
+    canvas.toDataURL(),
+  )
+
+  await flipBuilderTo(page, 'back')
+  await expect(frontFace).toHaveAttribute('aria-hidden', 'true')
+  await expect(backFace).toHaveAttribute('aria-hidden', 'false')
+  await expect(page.getByRole('button', { name: 'Flip to Front' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+  await expect(builderPreview(page, 'back')).toHaveAccessibleName(
+    /Aditya Jadhav, AI × Web3 Builder, with an original crew-builder mascot and Hacker House Goa 2026 branding/i,
+  )
+  const originalBack = await backCanvas.evaluate((canvas: HTMLCanvasElement) =>
+    canvas.toDataURL(),
+  )
+  expect(originalBack).not.toBe(originalFront)
+
+  await flipBuilderTo(page, 'front')
+  await expect
+    .poll(() => frontCanvas.evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL()))
+    .toBe(originalFront)
+
+  // Exercise repeated taps; the suite-wide console/page-error hook turns any
+  // render or animation failure into a test failure.
+  for (let cycle = 0; cycle < 2; cycle += 1) {
+    await flipBuilderTo(page, 'back')
+    await flipBuilderTo(page, 'front')
+  }
+
+  await flipBuilderTo(page, 'back')
+  await page.getByLabel('Builder title').selectOption({ label: 'Protocol Builder' })
+  await expect(builderPreview(page, 'back')).toHaveAccessibleName(/Protocol Builder/i)
+  await expect
+    .poll(() => backCanvas.evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL()))
+    .not.toBe(originalBack)
+
+  await flipBuilderTo(page, 'front')
+  await expect
+    .poll(() => frontCanvas.evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL()))
+    .not.toBe(originalFront)
+})
+
+test('Builder ID exports the visible front and back as distinct 1080×1350 PNGs', async ({
+  page,
+}) => {
+  test.setTimeout(90_000)
+  await openCompletedBuilder(page)
+
+  const frontName = 'hhgoa-2026-aditya-jadhav-builder-id-front.png'
+  await expectPreparedFile(page, frontName)
+  await expect(page.locator('.editor-download-button')).toContainText('Download Front')
+  const frontFile = await download(page)
+  const frontBytes = readFileSync(await frontFile.path())
+  expect(frontFile.suggestedFilename()).toBe(frontName)
+  expect(pngSize(frontBytes)).toEqual({ width: 1080, height: 1350 })
+
+  await flipBuilderTo(page, 'back')
+  const backName = 'hhgoa-2026-aditya-jadhav-builder-id-back.png'
+  await expectPreparedFile(page, backName)
+  await expect(page.locator('.editor-download-button')).toContainText('Download Back')
+  const backFile = await download(page)
+  const backBytes = readFileSync(await backFile.path())
+  expect(backFile.suggestedFilename()).toBe(backName)
+  expect(pngSize(backBytes)).toEqual({ width: 1080, height: 1350 })
+  expect(backBytes.equals(frontBytes)).toBe(false)
+})
+
+test('reduced-motion users can flip the Builder ID immediately with the keyboard', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await openCompletedBuilder(page)
+
+  const flipper = page.locator('.builder-card-flipper')
+  const card = page.locator('.builder-card-perspective')
+  const button = page.getByRole('button', { name: 'Flip to Back' })
+  await button.scrollIntoViewIfNeeded()
+
+  const durationMs = await flipper.evaluate((element) => {
+    const durations = getComputedStyle(element)
+      .transitionDuration.split(',')
+      .map((duration) => duration.trim())
+      .map((duration) =>
+        duration.endsWith('ms')
+          ? Number.parseFloat(duration)
+          : Number.parseFloat(duration) * 1000,
+      )
+    return Math.max(...durations)
   })
+  expect(durationMs).toBeLessThanOrEqual(0.011)
 
-  const file = await download(page)
-  expect(file.suggestedFilename()).toBe('hhgoa-2026-aditya-jadhav-builder-card.png')
-  expect(pngSize(readFileSync(await file.path()))).toEqual({ width: 1080, height: 1350 })
+  const before = await card.boundingBox()
+  const scrollBefore = await page.evaluate(() => window.scrollY)
+  await button.focus()
+  await expect(button).toBeFocused()
+  await page.keyboard.press('Enter')
+
+  const reverse = page.getByRole('button', { name: 'Flip to Front' })
+  await expect(reverse).toBeFocused()
+  await expect(flipper).toHaveAttribute('data-card-side', 'back')
+  await expect(builderPreview(page, 'back')).toBeVisible()
+  const after = await card.boundingBox()
+  const scrollAfter = await page.evaluate(() => window.scrollY)
+
+  expect(before).not.toBeNull()
+  expect(after).not.toBeNull()
+  expect(after!.width).toBeCloseTo(before!.width, 1)
+  expect(after!.height).toBeCloseTo(before!.height, 1)
+  expect(scrollAfter).toBeCloseTo(scrollBefore, 0)
 })
 
 test('Builder ID keeps an editable team name in the exported identity layer', async ({
@@ -245,7 +419,9 @@ test('the builder title suggestion is deterministic across reloads', async ({ pa
     await expect(previewOf(page, '1080×1080')).toBeVisible({ timeout: 20_000 })
     await chooseFormat(page, 'Builder ID')
     await page.getByLabel('Your name').fill('Aditya Jadhav')
-    return page.getByLabel('Builder title').getAttribute('placeholder')
+    const title = page.getByLabel('Builder title')
+    await expect(title).not.toHaveValue('')
+    return title.inputValue()
   }
 
   const first = await suggestionFor()
@@ -424,34 +600,132 @@ test('switching formats keeps sharing visible and prepares the latest valid grap
   await expectPreparedShare(page)
   await expect(
     share.getByRole('img', {
-      name: 'Prepared hhgoa-2026-aditya-jadhav-builder-card.png',
+      name: 'Prepared hhgoa-2026-aditya-jadhav-builder-id-front.png',
     }),
   ).toBeVisible()
 })
 
-test('no horizontal scroll at 320px across PFP, Builder ID and Crew', async ({
+test('Builder ID flip stays inside 320/375/390/414px with stable geometry', async ({
   page,
 }) => {
+  test.setTimeout(120_000)
   await page.setViewportSize({ width: 320, height: 720 })
   await upload(page, 'portrait.jpg')
   await expect(previewOf(page, '1080×1080')).toBeVisible({ timeout: 20_000 })
 
-  const expectNoOverflow = async () => {
-    const overflow = await page.evaluate(
-      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-    )
-    expect(overflow).toBeLessThanOrEqual(0)
-  }
+  const readGeometry = () =>
+    page.evaluate(() => {
+      const perspective = document.querySelector<HTMLElement>(
+        '.builder-card-perspective',
+      )!
+      const shell = document.querySelector<HTMLElement>('.builder-card-flip-shell')!
+      const front = document.querySelector<HTMLElement>('[data-card-face="front"]')!
+      const back = document.querySelector<HTMLElement>('[data-card-face="back"]')!
+      const button = document.querySelector<HTMLElement>('.builder-card-flip-button')!
+      const eventBrand = document.querySelector<HTMLElement>('.editor-app-brand-event')!
+      const cardRect = perspective.getBoundingClientRect()
+      const buttonRect = button.getBoundingClientRect()
 
-  await expectNoOverflow()
+      return {
+        overflow:
+          document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        scrollY: window.scrollY,
+        shellHeight: shell.offsetHeight,
+        eventBrand: {
+          text: eventBrand.textContent?.trim(),
+          clientWidth: eventBrand.clientWidth,
+          scrollWidth: eventBrand.scrollWidth,
+        },
+        card: {
+          x: cardRect.x,
+          y: cardRect.y,
+          width: cardRect.width,
+          height: cardRect.height,
+        },
+        front: { width: front.offsetWidth, height: front.offsetHeight },
+        back: { width: back.offsetWidth, height: back.offsetHeight },
+        button: {
+          x: buttonRect.x,
+          y: buttonRect.y,
+          width: buttonRect.width,
+          height: buttonRect.height,
+        },
+      }
+    })
+
+  const pfpOverflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  )
+  expect(pfpOverflow, 'PFP overflow at 320px').toBeLessThanOrEqual(0)
+
   await chooseFormat(page, 'Builder ID')
   await page.getByLabel('Your name').fill('Aditya Jadhav')
   await page.getByLabel('What you build').fill('Backend')
-  await expectNoOverflow()
+  await page
+    .getByLabel('Builder title')
+    .selectOption({ label: 'Web3 Security Researcher' })
+  await expect(page.locator('.editor-download-button')).toBeEnabled({
+    timeout: 30_000,
+  })
 
+  for (const width of [320, 375, 390, 414]) {
+    await page.setViewportSize({ width, height: 900 })
+    await expect(page.locator('.builder-card-flipper')).toHaveAttribute(
+      'data-card-side',
+      'front',
+    )
+
+    const flip = page.getByRole('button', { name: 'Flip to Back' })
+    await flip.scrollIntoViewIfNeeded()
+    const before = await readGeometry()
+
+    expect(before.overflow, `${width}px front overflow`).toBeLessThanOrEqual(0)
+    expect(before.eventBrand.text).toBe('Hacker House Goa 2026')
+    expect(
+      before.eventBrand.scrollWidth,
+      `${width}px full event branding remains visible`,
+    ).toBeLessThanOrEqual(before.eventBrand.clientWidth + 1)
+    expect(before.card.x, `${width}px card left edge`).toBeGreaterThanOrEqual(-1)
+    expect(
+      before.card.x + before.card.width,
+      `${width}px card right edge`,
+    ).toBeLessThanOrEqual(width + 1)
+    expect(before.front, `${width}px equal face sizes`).toEqual(before.back)
+    expect(before.button.x, `${width}px button left edge`).toBeGreaterThanOrEqual(-1)
+    expect(
+      before.button.x + before.button.width,
+      `${width}px button right edge`,
+    ).toBeLessThanOrEqual(width + 1)
+    expect(before.button.height, `${width}px touch target`).toBeGreaterThanOrEqual(44)
+    expect(before.button.y, `${width}px button below card`).toBeGreaterThanOrEqual(
+      before.card.y + before.card.height,
+    )
+
+    await flipBuilderTo(page, 'back')
+    const after = await readGeometry()
+    expect(after.overflow, `${width}px back overflow`).toBeLessThanOrEqual(0)
+    expect(after.card.width, `${width}px stable card width`).toBeCloseTo(
+      before.card.width,
+      1,
+    )
+    expect(after.card.height, `${width}px stable card height`).toBeCloseTo(
+      before.card.height,
+      1,
+    )
+    expect(after.shellHeight, `${width}px stable shell height`).toBe(before.shellHeight)
+    expect(after.scrollY, `${width}px no vertical jump`).toBeCloseTo(before.scrollY, 0)
+    expect(after.front, `${width}px equal back face sizes`).toEqual(after.back)
+
+    await flipBuilderTo(page, 'front')
+  }
+
+  await page.setViewportSize({ width: 320, height: 720 })
   await chooseFormat(page, 'Crew frame')
   await expect(previewOf(page, '2048×1362')).toBeVisible()
-  await expectNoOverflow()
+  const crewOverflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  )
+  expect(crewOverflow, 'Crew overflow at 320px').toBeLessThanOrEqual(0)
 })
 
 test('the caption can be copied without opening X (FR-054)', async ({

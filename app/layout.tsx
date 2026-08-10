@@ -6,20 +6,20 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://goabyte-builder-studio.vercel.app'),
   title: 'Builder Studio by GoaByte — Hacker House Goa 2026',
   description:
-    'Create your Hacker House Goa 2026 identity. Upload a photo, get a framed PFP or Builder ID, and post it with #FrameInGoa. No signup — your photo never leaves your device.',
+    'Create your Hacker House Goa 2026 identity. Add a real selfie, make a branded PFP, two-sided Builder ID or Crew Frame, and post it with #FrameInGoa. No signup — your photo never leaves your device.',
   applicationName: 'Builder Studio',
   authors: [{ name: 'GoaByte' }],
   openGraph: {
     title: 'Builder Studio by GoaByte — Hacker House Goa 2026',
     description:
-      'Create your Hacker House Goa 2026 identity. Upload a photo, get a framed PFP or Builder ID, and post it with #FrameInGoa. No signup — your photo never leaves your device.',
+      'Add a real selfie and make a Hacker House Goa 2026 PFP, two-sided Builder ID or Crew Frame. Post it with #FrameInGoa; your photo stays on-device.',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Builder Studio by GoaByte — Hacker House Goa 2026',
     description:
-      'Create your Hacker House Goa 2026 identity. Upload a photo, get a framed PFP or Builder ID, and post it with #FrameInGoa. No signup — your photo never leaves your device.',
+      'Add a real selfie and make a Hacker House Goa 2026 PFP, two-sided Builder ID or Crew Frame. Post it with #FrameInGoa; your photo stays on-device.',
   },
 }
 

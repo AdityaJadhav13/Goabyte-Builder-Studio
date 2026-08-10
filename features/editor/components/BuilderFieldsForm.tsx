@@ -1,11 +1,15 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useId, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { TextField } from '@/components/ui/TextField'
-import { nextTitle, suggestTitle } from '@/features/builder-title/suggest-title'
+import {
+  BUILDER_TITLES,
+  nextTitle,
+  suggestTitle,
+} from '@/features/builder-title/suggest-title'
 import type { BuilderFields } from '@/features/render/types'
 
 /**
@@ -71,6 +75,10 @@ export function BuilderFieldsForm({
   })
 
   const values = watch()
+  const followsNameSuggestion = useRef(fields.title === null)
+  const titleId = useId()
+  const titleHintId = `${titleId}-hint`
+  const titleErrorId = `${titleId}-error`
 
   /**
    * Push valid values up to the editor. Debounced because the preview
@@ -95,6 +103,14 @@ export function BuilderFieldsForm({
    * preview and the download (S1-1, NFR-035).
    */
   const suggestion = suggestTitle(values.name)
+  const selectedTitle = BUILDER_TITLES.find(({ label }) => label === values.title)
+
+  useEffect(() => {
+    if (!followsNameSuggestion.current || values.name.trim() === '') return
+    if (values.title !== suggestion) {
+      setValue('title', suggestion, { shouldValidate: true })
+    }
+  }, [setValue, suggestion, values.name, values.title])
 
   return (
     <div className="space-y-5">
@@ -128,32 +144,66 @@ export function BuilderFieldsForm({
         disabled={disabled}
       />
 
-      <TextField
-        label="Builder title"
-        hint="Optional. Pick one, or write your own."
-        value={values.title}
-        onChange={(v) => setValue('title', v, { shouldValidate: true })}
-        error={errors.title?.message}
-        maxLength={MAX_TITLE}
-        placeholder={suggestion}
-        disabled={disabled}
-        action={
+      <div>
+        <div className="mb-1.5 flex items-baseline justify-between gap-3">
+          <label htmlFor={titleId} className="text-sm font-bold text-cream">
+            Builder title
+          </label>
           <button
             type="button"
             disabled={disabled}
-            onClick={() =>
+            onClick={() => {
+              followsNameSuggestion.current = false
               setValue(
                 'title',
                 values.title.trim() === '' ? suggestion : nextTitle(values.title.trim()),
                 { shouldValidate: true },
               )
-            }
-            className="text-xs font-bold tracking-wide text-yellow underline underline-offset-2 disabled:opacity-40"
+            }}
+            className="text-sm font-bold tracking-wide text-yellow underline underline-offset-2 disabled:opacity-40"
           >
             {values.title.trim() === '' ? 'Suggest one' : 'Try another'}
           </button>
-        }
-      />
+        </div>
+
+        <select
+          id={titleId}
+          value={values.title}
+          onChange={(event) => {
+            followsNameSuggestion.current = false
+            setValue('title', event.target.value, { shouldValidate: true })
+          }}
+          disabled={disabled}
+          aria-invalid={errors.title ? true : undefined}
+          aria-describedby={errors.title ? `${titleHintId} ${titleErrorId}` : titleHintId}
+          className={`w-full border-2 bg-cream px-3.5 py-3 text-base text-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-yellow disabled:opacity-50 ${
+            errors.title ? 'border-pink-dim border-l-[6px]' : 'border-ink'
+          }`}
+        >
+          <option value="">Choose a title (optional)</option>
+          {BUILDER_TITLES.map((title) => (
+            <option key={title.id} value={title.label}>
+              {title.label}
+            </option>
+          ))}
+        </select>
+
+        <p id={titleHintId} className="mt-1.5 text-sm text-cream-dim/70">
+          {selectedTitle
+            ? selectedTitle.description
+            : `Suggested for your name: ${suggestion}`}
+        </p>
+
+        {errors.title ? (
+          <p
+            id={titleErrorId}
+            className="mt-1.5 flex items-start gap-1.5 text-sm text-pink"
+          >
+            <span aria-hidden>⚠</span>
+            {errors.title.message}
+          </p>
+        ) : null}
+      </div>
     </div>
   )
 }

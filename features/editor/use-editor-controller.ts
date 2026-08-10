@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react'
 import { prepareRenderAssets } from '@/features/render/assets'
 import {
   aspectOf,
+  DEFAULT_CARD_SIDE,
   DEFAULT_PFP_FRAME,
   DESIGN,
   OUTPUT_FORMATS,
@@ -389,6 +390,7 @@ export function useEditorController(): EditorController {
       fields: format === 'pfp' ? null : fields,
       pfpFrame: state.pfpFrame,
       crew: format === 'crew' ? state.crew : null,
+      cardSide: DEFAULT_CARD_SIDE,
     }
     // The card is titled by name; the PFP has no name to use.
     const subject =

@@ -65,4 +65,13 @@ describe('buildFileName', () => {
   it('identifies Crew Frame exports without changing the team slug', () => {
     expect(buildFileName('crew', 'GoaByte')).toBe('hhgoa-2026-goabyte-crew.png')
   })
+
+  it('identifies the visible Builder ID side', () => {
+    expect(buildFileName('builder-card', 'Aditya Jadhav', 'front')).toBe(
+      'hhgoa-2026-aditya-jadhav-builder-id-front.png',
+    )
+    expect(buildFileName('builder-card', 'Aditya Jadhav', 'back')).toBe(
+      'hhgoa-2026-aditya-jadhav-builder-id-back.png',
+    )
+  })
 })

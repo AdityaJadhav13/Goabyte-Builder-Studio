@@ -47,12 +47,17 @@ export const CARD_LAYOUT = {
   },
   headerMeta: {
     centreX: 468,
-    baselineY: 263,
+    /*
+     * Was 263, which put the baseline directly on the header panel's bottom
+     * keyline — the glyphs sat astride the stroke. 287 clears the panel and
+     * still leaves ~28px above the photo well at y=315.
+     */
+    baselineY: 287,
     fontFamily: FONT_STACK.text,
     fontWeight: 700,
     fontSize: 14,
     letterSpacing: 3,
-    text: 'OFFICIAL BUILDER CREDENTIAL',
+    text: 'BUILDER AT HACKER HOUSE GOA 2026',
   },
   titleChip: {
     x: 128,
@@ -69,6 +74,34 @@ export const CARD_LAYOUT = {
     maxLines: 1,
     lineHeight: 24,
     letterSpacing: 2,
+  },
+  /*
+   * An opaque plate for the identity column.
+   *
+   * The front composites text over generated plate artwork, and that artwork
+   * carries sparkles and dot clusters inside the cream information panel — a
+   * yellow star landed on "STACK / ROLE" and blue dots on the value beneath
+   * it. Coordinate-based tests cannot see a collision between baked art and
+   * live text, so the surface is guaranteed here rather than hoped for. Same
+   * principle as the PFP scrim and the landing panels.
+   *
+   * Inset from the panel's own border so the plate's frame still reads.
+   */
+  identityPlate: {
+    x: 122,
+    y: 1012,
+    width: 590,
+    height: 262,
+    radius: 12,
+    fill: '#efe3c8',
+  },
+  /* Same treatment for the footer ticker: a pink star sat across "SHIP". */
+  footerPlate: {
+    x: 250,
+    y: 1312,
+    width: 580,
+    height: 34,
+    radius: 8,
   },
   identity: {
     name: {

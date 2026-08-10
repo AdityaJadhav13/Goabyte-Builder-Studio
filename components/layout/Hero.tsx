@@ -51,8 +51,8 @@ export function Hero({ compact }: { readonly compact: boolean }) {
         judge clicks Continue.
       */}
       <p className="brand-description animate-fade-up animate-delay-3">
-        Upload a photo and it&rsquo;s framed automatically &mdash; no cropping, no signup.
-        Download your graphic and post it with #FrameInGoa.
+        Upload a real selfie and it&rsquo;s framed automatically &mdash; no cropping, no
+        signup. Download your Hacker House Goa 2026 graphic and post it with #FrameInGoa.
       </p>
 
       {/* Event dates */}

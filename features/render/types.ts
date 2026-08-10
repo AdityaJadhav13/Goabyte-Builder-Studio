@@ -20,6 +20,12 @@ export type PfpFrameId = 'heritage' | 'postcard' | 'midnight'
 
 export const DEFAULT_PFP_FRAME: PfpFrameId = 'postcard'
 
+/** Which physical face of the two-sided Builder ID is rendered. */
+export type CardSide = 'front' | 'back'
+
+export const CARD_SIDES: readonly CardSide[] = ['front', 'back']
+export const DEFAULT_CARD_SIDE: CardSide = 'front'
+
 export interface OutputSize {
   readonly width: number
   readonly height: number
@@ -101,6 +107,8 @@ export interface RenderModel {
   readonly pfpFrame: PfpFrameId
   /** Required for Crew; ignored by the other formats. */
   readonly crew: CrewFields | null
+  /** Used only by Builder ID; the other templates ignore it. */
+  readonly cardSide: CardSide
 }
 
 export interface RenderTarget {

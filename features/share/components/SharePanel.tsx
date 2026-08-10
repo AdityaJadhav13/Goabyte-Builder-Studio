@@ -125,7 +125,7 @@ export function SharePanel({
   }
 
   return (
-    <section aria-labelledby="share-heading" className="share-panel">
+    <section aria-label="Share and post your build" className="share-panel">
       <div className="share-panel-heading">
         <div>
           <p className="editor-section-kicker">Share without downloading</p>

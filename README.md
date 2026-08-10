@@ -2,9 +2,9 @@
 
 **Create your Hacker House Goa 2026 identity.**
 
-Upload a photo, get a branded PFP frame or a Builder ID card, download it, share it with `#FrameInGoa`. No login, no signup, one pass.
+Add a real, current selfie and get a branded PFP, a two-sided Builder ID, or a 1–4 person Crew Frame. Download or share the finished PNG with `#FrameInGoa` — no login, no signup, one pass.
 
-**Your photo never leaves your device.** Decoding, cropping, compositing and export all happen in your browser. There is no upload endpoint, no database, and no server in the data path — see [Privacy](#privacy).
+**Your photo never leaves your device.** Decoding, automatic framing, compositing and export all happen in your browser. There is no upload endpoint, no database, and no server in the data path — see [Privacy](#privacy).
 
 > An independent project by team **GoaByte**. Not an official Hacker House Goa product.
 
@@ -12,14 +12,14 @@ Upload a photo, get a branded PFP frame or a Builder ID card, download it, share
 
 ## Status
 
-**Day 0 — foundation.** Documentation, architecture, tooling and technical spikes. Product implementation begins at Slice 1.
+**Current build — complete client-side creation flow.** PFP, two-sided Builder ID, Crew Frame, PNG download and capability-based sharing all use the production canvas pipeline.
 
-|            |                                                                                         |
-| ---------- | --------------------------------------------------------------------------------------- |
-| Submission | Hacker House Goa 2026 — Open Trial, Frame / ID Card Generator                           |
-| Deadline   | 23:59 IST, 13 Aug 2026 · team target 14:00 IST                                          |
-| Deployment | https://goabyte-builder-studio-n1gvuilqm.vercel.app                                     |
-| Spikes     | [/spikes](https://goabyte-builder-studio-n1gvuilqm.vercel.app/spikes) — open on a phone |
+|            |                                                                               |
+| ---------- | ----------------------------------------------------------------------------- |
+| Submission | Hacker House Goa 2026 — Open Trial, Frame / ID Card Generator                 |
+| Deadline   | 23:59 IST, 13 Aug 2026 · team target 14:00 IST                                |
+| Deployment | https://goabyte-builder-studio.vercel.app                                     |
+| Spikes     | [/spikes](https://goabyte-builder-studio.vercel.app/spikes) — open on a phone |
 
 ## Team
 
@@ -69,12 +69,20 @@ Three commitments follow:
 
 Full reasoning in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
+### What ships
+
+- Every generated format carries the full **HACKER HOUSE GOA 2026** campaign identity and `#FrameInGoa`.
+- Builder ID has equal **1080×1350** front and back canvases. The front keeps the photo credential; the personalized reverse adds the builder name, one of 14 canonical titles, and an original crew-builder mascot drawn entirely with Canvas primitives.
+- A native button flips the live card with a CSS-only Y-axis transition. Keyboard activation, side-specific preview descriptions, live status and `prefers-reduced-motion` are built in; the control is webpage UI and can never enter an exported image.
+- Download and share always prepare the currently visible Builder ID side. Safe filenames identify it as `builder-id-front` or `builder-id-back`.
+- The upload and camera flows ask for a real, current selfie. This is honest guidance, not face recognition or an AI-image detector.
+
 ## Repository
 
 ```text
 app/        routes, layout, design tokens (@theme)
-features/   editor · upload · crop · render · export · share
-lib/        pure logic — image, canvas, brand, browser, errors. No React.
+features/   editor · upload · builder-title · render · export · share
+lib/        pure logic — image/framing, canvas, brand, browser, errors. No React.
 tests/      unit (Vitest) · e2e (Playwright)
 docs/       PRD, architecture, design system, spikes
 ```
@@ -107,7 +115,7 @@ A spike result that contradicts the plan is the spike working correctly.
 - no upload endpoint — there are no route handlers
 - no server-side rendering of user content
 - no remote image optimization (`next/image` is banned by lint rule)
-- no third-party image, crop, or face-detection APIs
+- no third-party image, framing, or face-detection APIs
 - no error-reporting transport that could carry photo or form data
 - all fonts and assets are same-origin — which is also what keeps the canvas untainted
 
@@ -132,14 +140,14 @@ The application is fully static; there are no runtime environment variables.
 Verify anonymous access after any deployment:
 
 ```bash
-curl -s -o /dev/null -w "%{http_code}\n" https://goabyte-builder-studio-n1gvuilqm.vercel.app
+curl -s -o /dev/null -w "%{http_code}\n" https://goabyte-builder-studio.vercel.app
 # expect 200, never 302
 ```
 
 ## Stack
 
-Next.js 15 (App Router) · TypeScript strict · Tailwind CSS v4 · React 19 · react-easy-crop · heic2any (lazy) · Vitest · pnpm · Vercel
+Next.js 15 (App Router) · TypeScript strict · Tailwind CSS v4 · React 19 · Canvas 2D · CSS transforms · heic2any (lazy) · Vitest · pnpm · Vercel
 
 ## Licence & attribution
 
-Original design work. Typefaces are SIL Open Font License 1.1; licence text ships in `public/fonts/`. Hacker House Goa branding is referenced visually but not reproduced — no organiser logos, wordmarks, or artwork are used. See [DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md) §1.
+Original composition and illustration work. The reverse-side crew-builder mascot is code-drawn and uses no external character asset. Typefaces are SIL Open Font License 1.1; licence text ships in `public/fonts/`. Event branding and supplied hero artwork are used with participant permission (D-1a), while Builder Studio remains an independent GoaByte project. See [DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md) §1.

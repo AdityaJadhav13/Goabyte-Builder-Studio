@@ -103,7 +103,7 @@ test('Use camera requests a live stream before offering the device-picker fallba
 
   await page.getByRole('button', { name: 'Take photo with camera' }).click()
 
-  const cameraDialog = page.getByRole('dialog', { name: 'Take your photo' })
+  const cameraDialog = page.getByRole('dialog', { name: 'Take your real selfie' })
   await expect(cameraDialog).toBeVisible()
   // Scope to the dialog: Next injects its own role="alert" route announcer
   // into <body>, so an unscoped query matches two elements.
@@ -277,7 +277,7 @@ test('desktop editor uses normal document scrolling without a nested rail', asyn
 
   // Sharing belongs to the editor itself, not to a post-download success
   // screen. Its extra content also participates in ordinary document scroll.
-  const sharePanel = page.getByRole('region', { name: 'Post your build' })
+  const sharePanel = page.getByRole('region', { name: /post your build/i })
   await expect(sharePanel).toBeVisible()
 
   const metrics = await page.evaluate(() => ({

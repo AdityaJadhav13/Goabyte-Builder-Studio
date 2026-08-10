@@ -30,6 +30,7 @@ export interface PfpFrameDefinition {
   readonly ink: string
   readonly accent: string
   readonly headerBaselineY: number
+  readonly headerMaxWidth: number
   readonly footerBaselineY: number
 }
 
@@ -56,6 +57,7 @@ export const PFP_FRAMES: readonly PfpFrameDefinition[] = [
     ink: '#062a1d',
     accent: '#ef2d70',
     headerBaselineY: 128,
+    headerMaxWidth: 860,
     footerBaselineY: 1011,
   },
   {
@@ -75,6 +77,7 @@ export const PFP_FRAMES: readonly PfpFrameDefinition[] = [
     ink: '#fff4d6',
     accent: '#f8df00',
     headerBaselineY: 105,
+    headerMaxWidth: 820,
     footerBaselineY: 1012,
   },
   {
@@ -92,6 +95,7 @@ export const PFP_FRAMES: readonly PfpFrameDefinition[] = [
     ink: '#2b160d',
     accent: '#8d2a1e',
     headerBaselineY: 118,
+    headerMaxWidth: 780,
     footerBaselineY: 1022,
   },
 ] as const

@@ -11,6 +11,7 @@ import {
   DESIGN,
   OUTPUT_FORMATS,
   PREVIEW_MAX_WIDTH_PX,
+  type CardSide,
   type OutputFormat,
 } from '@/features/render/types'
 import { ReplacePhotoButton } from '@/features/upload/components/ReplacePhotoButton'
@@ -24,6 +25,7 @@ import { canExport, type EditingState } from '../editor-state'
 import type { EditorController } from '../use-editor-controller'
 import { usePreparedGraphic } from '../use-prepared-graphic'
 import { CrewFieldsPanel } from './CrewFieldsPanel'
+import { BuilderCardFlipPreview } from './BuilderCardFlipPreview'
 import { FrameSelector } from './FrameSelector'
 import { PhotoPositionControls } from './PhotoPositionControls'
 import { PreviewCanvas } from './PreviewCanvas'
@@ -58,6 +60,7 @@ export function EditorWorkspace({
   const { format, image, fields, crew, pfpFrame } = state
   const crop = state.crops[format]
   const [adjustments, setAdjustments] = useState(initialAdjustments)
+  const [cardSide, setCardSide] = useState<CardSide>('front')
 
   const model = useMemo(
     () => ({
@@ -67,8 +70,9 @@ export function EditorWorkspace({
       fields: format === 'pfp' ? null : fields,
       pfpFrame,
       crew: format === 'crew' ? crew : null,
+      cardSide,
     }),
-    [format, image, crop, fields, pfpFrame, crew],
+    [format, image, crop, fields, pfpFrame, crew, cardSide],
   )
 
   const { width, height } = DESIGN[format]
@@ -97,13 +101,18 @@ export function EditorWorkspace({
     <section className="editor-studio" aria-label="Creative control room">
       <div className="editor-format-deck">
         <div className="editor-format-intro">
-          <p className="editor-section-kicker">Creative control room</p>
+          <p className="editor-section-kicker">
+            Hacker House Goa 2026 · Creative control room
+          </p>
           <h1>Make it unmistakably yours.</h1>
           <p>Pick a format, tune the frame and post a Goa-ready graphic.</p>
         </div>
         <FormatSelector
           value={format}
-          onChange={editor.setFormat}
+          onChange={(nextFormat) => {
+            if (nextFormat === 'builder-card') setCardSide('front')
+            editor.setFormat(nextFormat)
+          }}
           disabled={state.isExporting}
         />
       </div>
@@ -199,7 +208,9 @@ export function EditorWorkspace({
                   {prepared.status === 'preparing'
                     ? 'Preparing PNG…'
                     : prepared.graphic
-                      ? 'Download PNG'
+                      ? isBuilder
+                        ? `Download ${cardSide === 'front' ? 'Front' : 'Back'}`
+                        : 'Download PNG'
                       : 'Complete the details'}
                 </span>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden>
@@ -244,12 +255,13 @@ export function EditorWorkspace({
                 {width}×{height}
               </span>
               <span>PNG</span>
+              {isBuilder ? <span>{cardSide === 'front' ? 'Front' : 'Back'}</span> : null}
             </div>
           </div>
 
           <div className="editor-preview-viewport">
             <span className="editor-preview-coordinate editor-preview-coordinate--top">
-              GOA / 26
+              HACKER HOUSE GOA 2026
             </span>
             <span className="editor-preview-coordinate editor-preview-coordinate--side">
               LIVE OUTPUT
@@ -259,12 +271,21 @@ export function EditorWorkspace({
               className="editor-preview-canvas-wrap"
               data-format={format}
             >
-              <PreviewCanvas
-                model={model}
-                assets={state.assets}
-                description={description}
-                className="editor-preview-canvas"
-              />
+              {isBuilder ? (
+                <BuilderCardFlipPreview
+                  model={model}
+                  assets={state.assets}
+                  side={cardSide}
+                  onSideChange={setCardSide}
+                />
+              ) : (
+                <PreviewCanvas
+                  model={model}
+                  assets={state.assets}
+                  description={description}
+                  className="editor-preview-canvas"
+                />
+              )}
             </div>
           </div>
 

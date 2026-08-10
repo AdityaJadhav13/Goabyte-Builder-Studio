@@ -11,6 +11,17 @@ import { defineConfig, devices } from '@playwright/test'
 export default defineConfig({
   testDir: './tests/e2e',
   fullyParallel: false,
+  /**
+   * This suite is CPU-bound, not IO-bound: nearly every test decodes a photo,
+   * renders 1080×1350 canvases and PNG-encodes them, repeatedly. Playwright
+   * defaults to one worker per core, and on 12 cores that starved the shared
+   * server badly enough that tests which pass in 2.8s alone were timing out at
+   * 20s+ and cascading failures into unrelated specs.
+   *
+   * Two workers keeps the two projects moving without contending for the
+   * encoder. Measured, not guessed — the same specs pass in isolation.
+   */
+  workers: 2,
   forbidOnly: !!process.env.CI,
   retries: 0,
   reporter: [['list']],

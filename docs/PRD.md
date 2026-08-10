@@ -5,7 +5,7 @@
 **Submission:** Hacker House Goa 2026 — Open Trial, Frame / ID Card Generator
 **Deadline:** 23:59 IST, 13 August 2026 · **Team target: submit by 14:00 IST, 13 August 2026**
 **Owner:** Aditya (final decision maker) · **Frontend:** Nitin · **Design:** Lavitra
-**Status:** **Approved with amendments** · v0.2 · 7 August 2026 · see §13 Decision log
+**Status:** **Approved with amendments** · v0.3 · 10 August 2026 · see §13 Decision log
 
 > **On requirement IDs:** `FR-xxx` / `NFR-xxx` are stable identifiers, not an ordering. They are referenced by `ARCHITECTURE.md` and `QA_PLAN.md` and are never renumbered. Requirements added after v0.1 take the next free number and are filed under the section they belong to, so section blocks may be non-contiguous. Superseded requirements are struck through, never deleted.
 
@@ -25,7 +25,7 @@ Anyone applying to, attending, or rooting for Hacker House Goa 2026. Overwhelmin
 
 ### 1.3 Goal
 
-A visitor turns photos from their camera roll into an on-brand HH Goa 2026 profile frame, Builder ID, or 1–4 person Crew Frame, then downloads or shares a real PNG with `#FrameInGoa`. One pass, no login, and no upload of user photos.
+A visitor uses a real, current selfie to make an on-brand Hacker House Goa 2026 profile frame, two-sided Builder ID, or 1–4 person Crew Frame, then downloads or shares a real PNG with `#FrameInGoa`. One pass, no login, and no upload of user photos.
 
 ### 1.4 Why this matters for HH Goa
 
@@ -56,10 +56,11 @@ The submission succeeds if all of the following are true on 13 August:
 | S0-1  | Photo upload — file picker + drag/drop                  | JPG, PNG, WebP, HEIC/HEIF                                 |
 | S0-2  | Validation with specific, recoverable errors            | Never a generic "something went wrong"                    |
 | S0-3  | Decode + EXIF orientation + downscale to working image  | The reliability foundation                                |
-| S0-4  | Crop / zoom / reposition                                | `react-easy-crop`, per-format aspect                      |
+| S0-4  | Automatic framing + optional position controls          | No required crop step or heavyweight crop dependency      |
 | S0-5  | PFP generation — 1080×1080 PNG                          | Format A                                                  |
-| S0-6  | Builder ID generation — 1080×1350 PNG                   | Format B                                                  |
+| S0-6  | Builder ID generation — 1080×1350 PNG per side          | Format B, front or back                                   |
 | S0-13 | Crew Frame generation — 2048×1362 PNG                   | Format C, one to four builders                            |
+| S0-14 | Two-sided, flippable Builder ID                         | Equal Canvas faces; CSS-only accessible webpage control   |
 | S0-7  | Live preview that matches the export exactly            | Same renderer, different scale                            |
 | S0-8  | Download a real image file                              | Not a data-URL-in-a-tab                                   |
 | S0-9  | Share to X with `#FrameInGoa` guaranteed present        | Native file share on mobile, intent + download on desktop |
@@ -69,15 +70,15 @@ The submission succeeds if all of the following are true on 13 August:
 
 ### 2.2 P1 — differentiators. Build only when every P0 item is green.
 
-| ID   | Item                                                                  | Why it earns its place                                            |
-| ---- | --------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| S1-1 | Builder-title picker with a deterministic smart default               | Turns a form into a moment of delight; costs ~3 hours             |
-| S1-2 | Upward-biased smart default crop                                      | Most users will never touch the cropper; the default must be good |
-| S1-3 | Three selectable original PFP frame treatments                        | Ownership over the output without a settings panel                |
-| S1-4 | Three share-copy variants, one default                                | Avoids fifty identical posts in the timeline                      |
-| S1-5 | Purposeful motion (Framer Motion), `prefers-reduced-motion` respected | Premium feel; strictly subtle                                     |
-| S1-6 | Static, hand-designed OG image for the landing page                   | Every shared link looks intentional                               |
-| S1-7 | Privacy statement — "your photo never leaves your device"             | True, verifiable, and a real differentiator                       |
+| ID   | Item                                                      | Why it earns its place                                             |
+| ---- | --------------------------------------------------------- | ------------------------------------------------------------------ |
+| S1-1 | Builder-title picker with a deterministic smart default   | Turns a form into a moment of delight; costs ~3 hours              |
+| S1-2 | Upward-biased automatic frame                             | Most users will never touch the controls; the default must be good |
+| S1-3 | Three selectable original PFP frame treatments            | Ownership over the output without a settings panel                 |
+| S1-4 | Three share-copy variants, one default                    | Avoids fifty identical posts in the timeline                       |
+| S1-5 | Purposeful CSS motion, `prefers-reduced-motion` respected | Premium feel without an animation dependency                       |
+| S1-6 | Static, hand-designed OG image for the landing page       | Every shared link looks intentional                                |
+| S1-7 | Privacy statement — "your photo never leaves your device" | True, verifiable, and a real differentiator                        |
 
 ### 2.3 P2 — explicitly deferred. Not in this submission.
 
@@ -92,6 +93,8 @@ These are refused on sight, regardless of who proposes them or how much time app
 - **LLM calls on the critical path.** A network hop, a cost, a rate limit, and a source of non-determinism between preview and export, in exchange for something a curated list does better.
 - **A crypto/wallet feature.** HH Goa is an AI × Crypto residency; that does not make wallet-connect relevant to a picture frame. Adding it would read as pandering, and judges recognise pandering.
 - **Any framework, state library, or component library beyond the locked stack.** Reversing a late stack decision is how teams miss deadlines.
+- **WebGL, Three.js, React Three Fiber, or draggable 3D.** The Builder ID needs one controlled CSS front/back flip, not a rendering engine.
+- **A required crop screen or a new crop dependency.** Automatic framing remains the immediately downloadable default; optional position controls are only a rescue path.
 
 **Freeze:** 21:00 IST, Wednesday 12 August 2026. After the freeze, only P0 bug fixes; every change requires Aditya's approval and a full regression pass.
 
@@ -123,13 +126,13 @@ Notation: **→** user action · _italics_ = system state.
 
 ### J1 — First visit (0–5 seconds)
 
-Lands. Sees a headline stating exactly what this is, one sentence of explanation, a visible example of both output formats, and one unmistakable upload control above the fold at 375px. No cookie banner, no modal, no autoplay video. → Understands and taps Upload.
+Lands. Sees a headline stating exactly what this is, one sentence of explanation, examples of all three output formats, and one unmistakable real-selfie upload control above the fold at 375px. No cookie banner, no modal, no autoplay video. → Understands and adds a current selfie from the device or camera.
 
 **Requirement:** the primary CTA is reachable without scrolling on a 375×667 viewport.
 
 ### J2 — Upload, happy path
 
-→ Selects a photo. _Reading file_ (skeleton, ~instant) → _Decoding_ → _Ready._ Cropper appears with a good default crop already applied and the PFP format preselected. Total: under 1.5 s for a typical 3 MB JPG.
+→ Selects a photo. _Reading file_ (skeleton, ~instant) → _Decoding_ → _Ready._ A finished, automatically framed PFP appears immediately with optional position controls available afterwards. Total: under 1.5 s for a typical 3 MB JPG.
 
 ### J3 — HEIC upload (iPhone)
 
@@ -145,9 +148,9 @@ Lands. Sees a headline stating exactly what this is, one sentence of explanation
 
 Error state with a Try another photo action. All partial state is torn down, object URLs revoked, bitmaps closed. The app returns to a clean idle, never to a half-loaded limbo.
 
-### J6 — Crop and reposition
+### J6 — Optional frame adjustment
 
-→ Drags and pinches/scrolls to zoom. Aspect ratio is locked to the active format. Reset returns to the smart default. Crop state is preserved per format, so switching PFP ↔ Builder ID and back does not lose work.
+→ If the automatic result needs help, adjusts 1–3× zoom and independent X/Y position. Aspect ratio stays locked to the active format and Reset restores the automatic frame. Normalized framing state is preserved per format; there is no required crop screen or gesture editor.
 
 ### J7 — PFP path
 
@@ -155,15 +158,15 @@ Error state with a Try another photo action. All partial state is torn down, obj
 
 ### J8 — Builder ID path
 
-→ Switches to Builder ID. Form appears: **Name** (required), **Role / stack** (required), **Builder title** (optional, prefilled with a deterministic suggestion, editable, with a shuffle control). Preview updates as fields change (debounced). Long values are handled by the auto-fit rules in §5. → Download.
+→ Switches to Builder ID. Form appears: **Name** (required), **Role / stack** (required), **Team** (required), and **Builder title** (optional, chosen from the canonical 14 with a deterministic suggestion and predictable “Try another” control). The 1080×1350 front appears first. → Uses the webpage button to flip to the equally sized, personalized reverse. Both Canvas faces update from the same fields. → Downloads or shares the currently visible side.
 
 ### J9 — Download
 
-→ Taps Download. Button enters a rendering state, export runs at full resolution, a real PNG lands in the user's files with a sanitised, meaningful name. On iOS, where `<a download>` is unreliable, the Web Share path is offered and the rendered result is additionally presented as a long-pressable image — there is always a way to get the file.
+→ Taps Download. Button enters a rendering state, export runs at full resolution, and a real PNG lands in the user's files with a sanitised, meaningful name. Builder ID actions and filenames identify the visible face as Front or Back. On iOS, where `<a download>` is unreliable, the Web Share path is offered and the rendered result is additionally presented as a long-pressable image — there is always a way to get the file.
 
 ### J10 — Share to X
 
-→ Taps Share to X.
+→ Taps Share to X. The prepared PNG is the current format and, for Builder ID, the currently visible side.
 
 - **Mobile where `navigator.canShare({ files })` is true:** the native share sheet is invoked with the actual PNG and the caption. **The receiving application decides how it handles the shared file and text** — we can hand both over, but we cannot guarantee the target app uses both, and iOS in particular frequently drops the text when a file is attached. We therefore copy the caption to the clipboard at the same time and say so in the UI. Behaviour on real devices is established by **SPIKE-3 (§11.1)** before this path is finalised.
 - **Everywhere else:** the image downloads (if not already), `x.com/intent/post` opens pre-filled, and the UI states plainly: _"Your image is downloaded — attach it to the post."_
@@ -172,7 +175,7 @@ The caption always contains `#FrameInGoa`. We never say the image is attached un
 
 ### J11 — Edit after generating
 
-→ Back to editor. Crop, fields, and format are intact. Re-render and re-download work an arbitrary number of times with no memory growth.
+→ Back to editor. Framing adjustments, fields, format, and visible Builder ID side are intact for the current session. Re-render and re-download work an arbitrary number of times with no memory growth.
 
 ### J12 — Start over
 
@@ -192,6 +195,7 @@ The caption always contains `#FrameInGoa`. We never say the image is attached un
 - **FR-006** Warn (do not block) between 256×256 and 512×512 that output may look soft.
 - **FR-007** A cancelled file picker changes no state and shows no error.
 - **FR-008** Selecting a new file while one is loaded fully releases the previous image before decoding the new one.
+- **FR-065** Ask explicitly for a **real, current selfie** in both file-upload and camera paths, with simple centring guidance. This is user guidance, not biometric analysis, face detection, or an AI-image classifier.
 
 ### Decode pipeline
 
@@ -221,24 +225,28 @@ The caption always contains `#FrameInGoa`. We never say the image is attached un
 - **FR-022** Cover-fit the cropped region into the photo area without distortion; aspect ratio is never altered.
 - **FR-023** The frame must leave the central subject area unobscured, with documented safe margins.
 - **FR-024** The result must remain legible at 48×48 px (X avatar size) — verified visually, not assumed.
+- **FR-066** Every PFP, Builder ID face, and Crew Frame carries the full literal campaign identity **HACKER HOUSE GOA 2026**; abbreviated “HH GOA” copy may be decorative but never replaces the full lockup.
 
 ### Builder ID rendering
 
-- **FR-025** Export Builder ID at exactly **1080×1350 px** (4:5), PNG.
-- **FR-026** Render photo, name, role/stack, team name, optional builder title, and HH Goa 2026 identity per the design spec.
-- **FR-027** Keep critical identity content — photo, name, role and team — inside a conservative central safe region with sufficient edge margin to survive UI overlays, repost and embed contexts, thumbnail treatments, and future changes to platform presentation. The safe region is defined once in the card layout config as an inset, not derived from any single platform's current crop behaviour.
+- **FR-025** Export either Builder ID face at exactly **1080×1350 px** (4:5), PNG.
+- **FR-026** Preserve the production front: photo, name, role/stack, team name, optional builder title, QR, full Hacker House Goa 2026 identity, date and required campaign hashtag.
+- **FR-027** Keep each face's critical identity content inside a conservative central safe region with sufficient edge margin to survive UI overlays, repost and embed contexts, thumbnail treatments, and future changes to platform presentation. Each safe region is defined once in its card layout config, not derived from any single platform's current crop behaviour.
 - **FR-028** Auto-fit name: shrink font from the design size down to a documented floor, then wrap to a maximum of 2 lines, then ellipsis.
 - **FR-029** Auto-fit role, team and title with the same mechanism and their own documented floors and line limits.
 - **FR-030** Render Unicode correctly — Devanagari, accented Latin, and emoji must not produce tofu or clipping.
+- **FR-067** Model the physical face as `CardSide = 'front' | 'back'`. Both faces are distinct Canvas compositions reached through the same synchronous `renderTemplate` pipeline and the same 1080×1350 design space; the back is never a DOM recreation.
+- **FR-068** Personalize the reverse with the builder name and selected title plus full event identity, `BUILD · SHIP · GOA`, `#FrameInGoa`, tropical poster motifs and an original crew-builder astronaut drawn entirely from local Canvas primitives. It consumes no external character image or remote asset.
 
 ### Form
 
 - **FR-031** Name: required, trimmed, 1–32 characters after trim, any Unicode. Whitespace-only is rejected.
 - **FR-032** Role / stack: required, trimmed, 1–40 characters.
 - **FR-032a** Team name: required for Builder ID, trimmed, 1–32 characters; defaults to GoaByte and remains editable.
-- **FR-033** Builder title: optional, trimmed, 0–28 characters, prefilled with a deterministic suggestion.
+- **FR-033** Builder title: optional in the form, trimmed, 0–28 characters, and prefilled with a deterministic suggestion. If it is deliberately left empty, both card faces render the generic `BUILDER` fallback rather than an empty plaque.
 - **FR-034** The default builder title is derived deterministically from the name so it never changes between preview and export.
 - **FR-035** A shuffle control offers alternative titles; the chosen value is then fixed in state.
+- **FR-070** The one canonical title source contains exactly these 14 labels and non-empty responsibility descriptions: `Protocol Builder`, `Smart Contract Engineer`, `Web3 Developer`, `Blockchain Architect`, `DeFi Builder`, `dApp Builder`, `Web3 Security Researcher`, `AI × Web3 Builder`, `Frontend Engineer`, `Backend Engineer`, `Product Builder`, `Protocol Researcher`, `Growth & Community`, and `Founder`. The form and deterministic suggestion/cycling logic consume that source; the selected label passes through `BuilderFields` to both renderers and is covered by the same catalog tests. No AI or network call generates titles.
 - **FR-036** Validation via React Hook Form + Zod, with inline errors tied to inputs by `aria-describedby`.
 - **FR-037** Errors are announced accessibly and indicated by more than colour alone.
 
@@ -248,6 +256,7 @@ The caption always contains `#FrameInGoa`. We never say the image is attached un
 - **FR-039** Preview canvas is sized for `devicePixelRatio` (capped at 2) so it is crisp without wasting memory.
 - **FR-040** Preview updates are debounced (~120 ms) on text input and coalesced into `requestAnimationFrame`.
 - **FR-041** The preview canvas carries `role="img"` and a generated `aria-label` describing the output.
+- **FR-069** Show both Builder ID canvases in an equal-size CSS flip shell controlled by a native button directly below the card. Side state stays local and ephemeral; the button exposes its pressed state, the visible face is announced, keyboard activation works, and `prefers-reduced-motion` removes the transition without disabling side switching. No flip control or CSS transform is drawn into either canvas.
 
 ### Export and download
 
@@ -255,7 +264,7 @@ The caption always contains `#FrameInGoa`. We never say the image is attached un
 - **FR-043** All required font faces are explicitly awaited via `document.fonts.load()` for each family/weight/size in use before any text is drawn. `document.fonts.ready` alone is insufficient.
 - **FR-044** All frame and decoration assets are fully loaded and decoded before rendering begins.
 - **FR-045** Only same-origin assets are drawn to canvas, so the canvas is never tainted and `toBlob` never throws a security error.
-- **FR-046** Filenames follow `hhgoa-2026-{slug}-{format}.png`, with the slug sanitised to `[a-z0-9-]`, truncated to 32 characters, falling back to `builder` when empty.
+- **FR-046** Filenames follow `hhgoa-2026-{slug}-{format}.png`, with the slug sanitised to `[a-z0-9-]`, truncated to 32 characters, falling back to `builder` when empty. Builder ID faces use `hhgoa-2026-{slug}-builder-id-front.png` and `hhgoa-2026-{slug}-builder-id-back.png`.
 - **FR-047** Repeated download clicks are ignored while a render is in flight.
 - **FR-048** Every export blob URL is revoked after the download is triggered.
 - **FR-049** A render failure surfaces a specific error with a retry action and never leaves a permanent spinner.
@@ -269,6 +278,7 @@ The caption always contains `#FrameInGoa`. We never say the image is attached un
 - **FR-054** If the share window is blocked or the share sheet is dismissed, offer a copy-caption fallback and a visible link.
 - **FR-055** The UI states truthfully whether the image is attached or must be attached manually.
 - **FR-056** Copy the caption to the clipboard alongside a file share, and tell the user, because iOS may drop the text.
+- **FR-071** Background preparation, Download, native share, PNG clipboard and X fallback all receive the current `RenderModel`; changing `cardSide` invalidates and rebuilds the prepared PNG so every action refers to the visible Builder ID face. Captions may remain side-neutral.
 
 ### Application state
 
@@ -284,7 +294,7 @@ The caption always contains `#FrameInGoa`. We never say the image is attached un
 ### Performance
 
 - **NFR-001** Landing page LCP under **1.8 s** on a mid-range Android over simulated 4G.
-- **NFR-002** Landing route first-load JS at or under **120 KB gzipped**; cropper and HEIC converter excluded via dynamic import.
+- **NFR-002** Landing route first-load JS at or under **120 KB gzipped**; the HEIC converter, workspace and Builder ID form keep their dynamic boundaries. No crop or animation library is added.
 - **NFR-003** `heic2any` is never downloaded unless a HEIC decode has actually failed.
 - **NFR-004** Decode + normalize of a typical 3 MB JPG completes in under **800 ms** on a mid-range phone.
 - **NFR-005** Full-resolution export completes in under **400 ms** (p50, desktop) and **1200 ms** (p95, mid-range Android).
@@ -298,7 +308,7 @@ The caption always contains `#FrameInGoa`. We never say the image is attached un
 - **NFR-010** Interactive targets are at least 44×44 px.
 - **NFR-011** With the on-screen keyboard open, the active input and the primary action remain reachable.
 - **NFR-012** Respect iOS safe-area insets; nothing sits under the home indicator.
-- **NFR-013** Pinch-zoom on the cropper does not trigger browser page zoom.
+- **NFR-013** Optional Frame Lab controls remain operable at phone widths without capturing browser pinch-zoom or inserting a mandatory gesture step.
 
 ### Accessibility
 
@@ -352,13 +362,13 @@ Each is a pass/fail gate. All must pass on production before submission.
 
 **S0-2 Validation** — PASS when a `.pdf` renamed to `.jpg`, a 40 MB image, and a 100×100 image each produce a distinct, specific, actionable error, and the app remains usable afterwards. FAIL on any generic error text or state corruption.
 
-**S0-3 Decode** — PASS when a photo taken in portrait on an iPhone appears upright in the cropper, the preview, and the exported PNG. FAIL if any of the three is rotated.
+**S0-3 Decode** — PASS when a photo taken in portrait on an iPhone appears upright in the automatically framed preview and the exported PNG. FAIL if either is rotated.
 
 **S0-4 Automatic framing** — PASS when portrait, landscape, square, panoramic and off-centre photos each produce a well-framed 1:1 graphic with the subject intact and no distortion, with zero user interaction between choosing the photo and seeing the result; and when the same photo re-uploaded produces an identical graphic. FAIL if any common photo shape yields a decapitated or badly-framed subject, or if any step is required before the result appears.
 
-**S0-5 PFP** — PASS when the export is exactly 1080×1080, the frame is on-brand, the face is unobscured, and the result is recognisable at 48×48. FAIL on wrong dimensions or an obscured subject.
+**S0-5 PFP** — PASS when the export is exactly 1080×1080, includes the full `HACKER HOUSE GOA 2026` lockup and `#FrameInGoa`, leaves the face unobscured, and remains recognisable at 48×48. FAIL on wrong dimensions, incomplete event branding, or an obscured subject.
 
-**S0-6 Builder ID** — PASS when the export is exactly 1080×1350 and remains legible and correctly laid out with: a 1-character name, a 32-character name, an emoji name, a Devanagari name, and a 40-character role. FAIL on overflow, clipping, or tofu.
+**S0-6 Builder ID** — PASS when both front and back exports are exactly 1080×1350, carry the full event identity and remain legible with a 1-character name, 32-character name, emoji name, Devanagari name, 40-character role, and longest canonical title. Front/back filenames identify the selected face. FAIL on wrong dimensions, stale personalization, overflow, clipping, tofu, or a webpage control inside either PNG.
 
 **S0-7 Preview fidelity** — PASS when preview and export are visually identical in framing, typography, and colour under side-by-side comparison at matched scale. FAIL on any font substitution or layout difference.
 
@@ -371,6 +381,10 @@ Each is a pass/fail gate. All must pass on production before submission.
 **S0-11 States** — PASS when every async operation shows a pending state, every failure is recoverable in-place, and no path produces a blank screen or a spinner lasting beyond 10 s. FAIL on any dead end.
 
 **S0-12 Repeat use** — PASS when five consecutive upload → generate → download cycles on an iPhone complete without a tab reload and with heap under the NFR-007 budget. FAIL on any crash or unbounded growth.
+
+**S0-13 Crew Frame** — PASS when a one-to-four-person 2048×1362 export contains the full `HACKER HOUSE GOA 2026` lockup, crew identity and `#FrameInGoa`. FAIL on wrong dimensions, missing photos, or abbreviated-only event branding.
+
+**S0-14 Two-sided Builder ID** — PASS when Front is the initial side; the button below the card flips to a personalized Canvas back and returns; it remains keyboard-operable and reachable without horizontal scroll at 320/375/390/414px; reduced motion switches immediately; and download/share track the visible side. FAIL on a layout jump, mirrored content, stale prepared PNG, WebGL dependency, or CSS/UI chrome in the artwork.
 
 ---
 
@@ -398,7 +412,7 @@ Each entry states the expected behaviour. These are test cases, not hypothetical
 | No EXIF at all                        | Treated as orientation 1                                               |
 | HEIC that fails conversion            | HEIC-specific error naming the fix                                     |
 | HEIC on a browser with native support | Converted natively; `heic2any` never downloaded                        |
-| 10000×200 panorama                    | Accepted; crop defaults to a valid centred square; no distortion       |
+| 10000×200 panorama                    | Accepted; automatic frame is valid and deterministic; no distortion    |
 | 200×10000 tall image                  | Same                                                                   |
 | Zero-byte file                        | Rejected before decode                                                 |
 | Picker cancelled                      | No state change, no error                                              |
@@ -420,8 +434,13 @@ Each entry states the expected behaviour. These are test cases, not hypothetical
 | Newlines pasted into a field             | Normalised to spaces                                                                            |
 | Leading/trailing whitespace              | Trimmed before render and before filename generation                                            |
 | 40-character role                        | Auto-fit per FR-029                                                                             |
-| Empty builder title                      | Field omitted from the card; layout reflows, no gap                                             |
+| Empty builder title                      | Both card faces render the generic `BUILDER` fallback; no blank plaque                          |
 | Name that sanitises to empty (all emoji) | Filename falls back to `builder`                                                                |
+| Longest canonical title                  | Fits on both Builder ID faces without clipping                                                  |
+| `AI × Web3 Builder`                      | Multiplication symbol and intended casing are preserved                                         |
+| `Growth & Community`                     | Ampersand is preserved                                                                          |
+| Builder ID side changes                  | Preview and prepared share PNG update together; no stale front/back content                     |
+| Emoji-only Builder ID name               | Filenames fall back to `hhgoa-2026-builder-builder-id-front.png` or `…-back.png`                |
 
 ### Environment
 
@@ -437,7 +456,7 @@ Each entry states the expected behaviour. These are test cases, not hypothetical
 | Low memory / tab under pressure         | Working-image cap makes this survivable; error boundary catches the rest                   |
 | Offline after first load                | App shell works; share opens a failed navigation, which is the browser's message, not ours |
 | Fonts fail to load                      | Documented fallback stack; export still succeeds with acceptable typography                |
-| `prefers-reduced-motion`                | All animation removed                                                                      |
+| `prefers-reduced-motion`                | Flip transition is removed; the same button still changes and announces the visible side   |
 | 200% browser zoom                       | No overflow, no clipping                                                                   |
 | Desktop Safari `toBlob`                 | Verified explicitly — historically the weakest canvas implementation                       |
 | Rapid format toggling                   | No render race; last request wins                                                          |
@@ -560,6 +579,8 @@ _Trade-off, stated plainly:_ a user who dislikes the automatic framing has no re
 _Consequence to watch:_ `VERTICAL_SUBJECT_BIAS` now carries the entire product. It is the difference between a good graphic and a decapitated one, with no manual correction available. It deserves explicit attention in usability testing.
 
 **D-9a — Optional frame controls activate S1-8.** _(9 Aug 2026, supersedes the no-recourse portion of D-9.)_ Real-photo review requested a way to set and zoom the subject. Automatic framing remains the immediate, downloadable default, while an optional Frame Lab exposes 1–3× zoom and independent X/Y positioning per output format. The implementation stays dependency-light and stores only normalized crop rectangles; reset returns exactly to `autoFrame`. This preserves D-9's one-click primary flow while removing its acknowledged failure mode for off-centre subjects.
+
+**D-10 — Builder ID becomes a two-sided Canvas credential.** _(10 Aug 2026.)_ `CardSide` selects one of two deterministic 1080×1350 compositions inside the existing renderer. The front remains the production photo credential; the reverse uses the same live identity fields and an original crew-builder astronaut drawn from Canvas paths, with no downloaded character asset. A local React state chooses the visible side and a CSS-only `rotateY` transition presents it; the native flip button stays outside both canvases, respects reduced motion, and is absent from export. The current side flows through the existing PNG, filename and share preparation paths. This decision adds no WebGL, animation framework, manual crop screen, persistent state, upload, database, or server-rendered user content.
 
 **D-8 — Privacy is an invariant, not a claim.** NFR-037 enumerates the prohibited mechanisms explicitly, so "your photo never leaves your device" is enforced by the absence of any code path that could violate it, not by intent.
 

@@ -1,5 +1,6 @@
 import { FONT_STACK } from '../fonts'
 import { DESIGN } from '../types'
+import { HH_GOA_CAMPAIGN } from '@/lib/brand/campaign'
 
 const { width, height } = DESIGN.crew
 
@@ -43,7 +44,7 @@ export const CREW_LAYOUT = {
     fontSize: 78,
     minFontSize: 54,
     lineHeight: 80,
-    text: 'HH GOA 2026',
+    text: HH_GOA_CAMPAIGN,
   },
   team: {
     centreX: 1024,

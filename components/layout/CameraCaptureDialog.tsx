@@ -107,7 +107,7 @@ export function CameraCaptureDialog({
           <div>
             <p className="camera-dialog-kicker">On-device camera</p>
             <h2 id="camera-dialog-title" className="camera-dialog-title">
-              Take your photo
+              Take your real selfie
             </h2>
           </div>
           <button

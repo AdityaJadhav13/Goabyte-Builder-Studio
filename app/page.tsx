@@ -1,10 +1,25 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { useState, useCallback } from 'react'
 import { Hero } from '@/components/layout/Hero'
 import { LandingForm } from '@/components/layout/LandingForm'
 import { AboutUs } from '@/components/layout/AboutUs'
-import { EditorShell } from '@/features/editor/components/EditorShell'
+
+const EditorShell = dynamic(
+  () =>
+    import('@/features/editor/components/EditorShell').then(
+      (module) => module.EditorShell,
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <p role="status" className="py-16 text-center text-sm font-bold text-yellow">
+        Opening the Hacker House Goa creative control room…
+      </p>
+    ),
+  },
+)
 
 /**
  * Landing page — split-screen hero with branding + form card.
@@ -50,10 +65,11 @@ export default function Home() {
               <div className="min-w-0">
                 <p className="editor-app-brand-name">GoaByte</p>
                 <p className="editor-app-brand-product">Builder Studio</p>
+                <p className="editor-app-brand-event">Hacker House Goa 2026</p>
               </div>
             </div>
 
-            <p className="editor-app-privacy">
+            <p className="editor-app-privacy" aria-label="Private, on-device">
               <svg
                 width="14"
                 height="14"

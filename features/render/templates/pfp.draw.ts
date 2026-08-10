@@ -1,6 +1,7 @@
 import { frameById, type PfpFrameDefinition } from '@/features/render/frame-catalog'
 import { PALETTE } from '@/lib/brand/palette'
 import { fillRect, roundedRectPath } from '@/lib/canvas/draw-primitives'
+import { fitText } from '@/lib/canvas/fit-text'
 import { cropToSourceRect } from '@/lib/image/crop-geometry'
 import type { RenderAssets, RenderModel, RenderTarget } from '../types'
 import { PFP_LAYOUT as L } from './pfp.layout'
@@ -25,9 +26,22 @@ function drawPlaqueText(ctx: CanvasRenderingContext2D, frame: PfpFrameDefinition
   ctx.textBaseline = 'alphabetic'
   ctx.fillStyle = frame.ink
 
-  ctx.font = `${L.topTitle.fontWeight} ${L.topTitle.fontSize}px ${L.topTitle.fontFamily}`
-  ctx.letterSpacing = `${L.topTitle.letterSpacing}px`
-  ctx.fillText(L.topTitle.text, L.topTitle.centreX, frame.headerBaselineY)
+  const title = fitText(ctx, {
+    text: L.topTitle.text,
+    fontFamily: L.topTitle.fontFamily,
+    fontWeight: L.topTitle.fontWeight,
+    fontSize: L.topTitle.fontSize,
+    minFontSize: L.topTitle.minFontSize,
+    maxWidth: frame.headerMaxWidth,
+    maxLines: L.topTitle.maxLines,
+    lineHeight: L.topTitle.lineHeight,
+    letterSpacing: L.topTitle.letterSpacing,
+  })
+  ctx.fillText(
+    title.lines[0] ?? L.topTitle.text,
+    L.topTitle.centreX,
+    frame.headerBaselineY,
+  )
 
   ctx.font = `${L.topKicker.fontWeight} ${L.topKicker.fontSize}px ${L.topKicker.fontFamily}`
   ctx.letterSpacing = `${L.topKicker.letterSpacing}px`
@@ -37,7 +51,9 @@ function drawPlaqueText(ctx: CanvasRenderingContext2D, frame: PfpFrameDefinition
   ctx.font = `${L.tag.fontWeight} ${frame.id === 'heritage' ? 20 : 23}px ${L.tag.fontFamily}`
   ctx.letterSpacing = `${L.tag.letterSpacing}px`
   ctx.fillText(
-    frame.id === 'heritage' ? L.tag.text : 'HH GOA 2026 · #FrameInGoa',
+    frame.id === 'heritage'
+      ? `${L.topTitle.text} · ${L.tag.text}`
+      : `${L.topTitle.text} · #FrameInGoa`,
     L.tag.centreX,
     frame.footerBaselineY,
   )

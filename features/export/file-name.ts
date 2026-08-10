@@ -1,4 +1,4 @@
-import type { OutputFormat } from '@/features/render/types'
+import type { CardSide, OutputFormat } from '@/features/render/types'
 
 /**
  * Stable, safe, meaningful download filenames. PRD FR-046.
@@ -32,6 +32,11 @@ export function slugify(input: string): string {
   return slug.length > 0 ? slug : FALLBACK_SLUG
 }
 
-export function buildFileName(format: OutputFormat, subject?: string | null): string {
-  return `hhgoa-2026-${slugify(subject ?? '')}-${format}.png`
+export function buildFileName(
+  format: OutputFormat,
+  subject?: string | null,
+  cardSide: CardSide = 'front',
+): string {
+  const output = format === 'builder-card' ? `builder-id-${cardSide}` : format
+  return `hhgoa-2026-${slugify(subject ?? '')}-${output}.png`
 }

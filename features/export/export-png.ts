@@ -34,7 +34,7 @@ export async function exportPng(
       blob,
       width,
       height,
-      fileName: buildFileName(model.format, subject),
+      fileName: buildFileName(model.format, subject, model.cardSide),
       durationMs: performance.now() - started,
     }
   } catch (cause) {

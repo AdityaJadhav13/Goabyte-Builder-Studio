@@ -6,6 +6,7 @@ import { drawFittedText, fitText } from '@/lib/canvas/fit-text'
 import { cropToSourceRect } from '@/lib/image/crop-geometry'
 import { BUILDER_STUDIO_QR } from '@/lib/qr/qr-matrix'
 import type { RenderAssets, RenderModel, RenderTarget } from '../types'
+import { drawBuilderCardBack } from './builder-card-back.draw'
 import { CARD_LAYOUT as L } from './builder-card.layout'
 
 function drawIdentityRow(
@@ -34,7 +35,7 @@ function drawIdentityRow(
 }
 
 /** A real, portrait credential: generated texture plus exact canvas data. */
-export function drawBuilderCard(
+function drawBuilderCardFront(
   target: RenderTarget,
   model: RenderModel,
   assets: RenderAssets,
@@ -112,6 +113,12 @@ export function drawBuilderCard(
   )
   ctx.letterSpacing = '0px'
 
+  // Guarantee a clean surface for the identity column before any text lands
+  // on it — see CARD_LAYOUT.identityPlate.
+  roundedRectPath(ctx, L.identityPlate, L.identityPlate.radius)
+  ctx.fillStyle = L.identityPlate.fill
+  ctx.fill()
+
   ctx.textAlign = 'left'
   drawIdentityRow(ctx, L.identity.name, fields?.name ?? '')
   drawIdentityRow(ctx, L.identity.role, fields?.role ?? '')
@@ -137,10 +144,31 @@ export function drawBuilderCard(
   ctx.letterSpacing = `${L.date.letterSpacing}px`
   ctx.fillText(L.date.text, L.date.centreX, L.date.baselineY)
 
+  // The plate's bottom band carries a pink star that landed across "SHIP".
+  // A dark plate behind the ticker keeps the line clean without hiding the
+  // decoration either side of it.
+  roundedRectPath(ctx, L.footerPlate, L.footerPlate.radius)
+  ctx.fillStyle = 'rgba(16, 16, 15, 0.82)'
+  ctx.fill()
+
   ctx.fillStyle = '#fff4d6'
   ctx.font = `${L.footer.fontWeight} ${L.footer.fontSize}px ${L.footer.fontFamily}`
   ctx.letterSpacing = `${L.footer.letterSpacing}px`
   ctx.fillText(L.footer.text, L.footer.centreX, L.footer.baselineY)
   ctx.letterSpacing = '0px'
   ctx.textAlign = 'left'
+}
+
+/** Dispatch the two physical faces without duplicating the render pipeline. */
+export function drawBuilderCard(
+  target: RenderTarget,
+  model: RenderModel,
+  assets: RenderAssets,
+): void {
+  if (model.cardSide === 'back') {
+    drawBuilderCardBack(target, model, assets)
+    return
+  }
+
+  drawBuilderCardFront(target, model, assets)
 }
