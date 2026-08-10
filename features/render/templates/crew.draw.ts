@@ -1,6 +1,6 @@
 import { CREW_PLATE_PATH } from '@/features/render/assets'
 import { PALETTE } from '@/lib/brand/palette'
-import { drawCircle, fillRect } from '@/lib/canvas/draw-primitives'
+import { drawCircle, fillRect, roundedRectPath } from '@/lib/canvas/draw-primitives'
 import { drawQrCode } from '@/lib/canvas/draw-qr-code'
 import { fitText } from '@/lib/canvas/fit-text'
 import { cropToSourceRect } from '@/lib/image/crop-geometry'
@@ -163,9 +163,29 @@ export function drawCrew(
   ctx.letterSpacing = `${L.qrLabel.letterSpacing}px`
   ctx.fillText(L.qrLabel.text, L.qrLabel.centreX, L.qrLabel.baselineY)
 
-  ctx.fillStyle = '#10100f'
+  // Plate first, then the text on top of it — the ticker crosses a starburst
+  // and was illegible where they overlapped.
   ctx.font = `${L.footer.fontWeight} ${L.footer.fontSize}px ${L.footer.fontFamily}`
   ctx.letterSpacing = `${L.footer.letterSpacing}px`
+  const footerWidth = ctx.measureText(L.footer.text).width
+  const plateWidth = footerWidth + L.footerPlate.paddingX * 2
+  roundedRectPath(
+    ctx,
+    {
+      x: L.footer.centreX - plateWidth / 2,
+      y: L.footer.baselineY - L.footerPlate.height * 0.72,
+      width: plateWidth,
+      height: L.footerPlate.height,
+    },
+    L.footerPlate.radius,
+  )
+  ctx.fillStyle = L.footerPlate.fill
+  ctx.fill()
+  ctx.lineWidth = 3
+  ctx.strokeStyle = '#10100f'
+  ctx.stroke()
+
+  ctx.fillStyle = '#10100f'
   ctx.fillText(L.footer.text, L.footer.centreX, L.footer.baselineY)
   ctx.letterSpacing = '0px'
   ctx.textAlign = 'left'

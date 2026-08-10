@@ -97,6 +97,13 @@ export const CREW_LAYOUT = {
     minFontSize: 14,
     lineHeight: 22,
   },
+  /**
+   * Opaque plate behind the footer ticker. The strip runs across a sun
+   * starburst, so ink text on bare art was unreadable exactly where the two
+   * met. Same principle as the Builder ID identity plate and the PFP scrim:
+   * guarantee the surface rather than hope the art behind it stays quiet.
+   */
+  footerPlate: { height: 52, paddingX: 34, radius: 10, fill: '#fff4d6' },
   footer: {
     centreX: 1024,
     baselineY: 1272,

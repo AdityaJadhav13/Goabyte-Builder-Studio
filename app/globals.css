@@ -4119,3 +4119,45 @@ body {
   line-height: 1.6;
   color: color-mix(in srgb, var(--color-cream-dim) 70%, transparent);
 }
+
+/*
+ * Wide screens: the card is portrait, so a full-width stage left a tall empty
+ * column beside it. Actions and sharing move into that column instead of
+ * stacking underneath, which removes the gap and puts the controls level with
+ * the graphic they act on.
+ */
+/*
+ * 1400, not 1180. At 1280 the share column squeezed the preview canvas from
+ * ~300 to 290 device pixels — filling a gap is not worth shrinking the thing
+ * the gap exists to showcase. Below this width the stage stays single-column
+ * and the actions sit underneath.
+ */
+@media (min-width: 1400px) {
+  .editor-preview-stage {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 380px);
+    grid-template-rows: auto 1fr auto;
+    column-gap: 1.5rem;
+    align-content: start;
+  }
+
+  .editor-preview-heading,
+  .editor-preview-viewport,
+  .editor-preview-meta,
+  .editor-quality-warning {
+    grid-column: 1;
+  }
+
+  .editor-output-actions {
+    grid-column: 2;
+    grid-row: 1 / -1;
+    margin-top: 0;
+    /*
+     * Natural height, not stretched. Stretching pushed the share buttons to
+     * the bottom of the column and opened a hole INSIDE the bordered panel,
+     * between the caption and the actions — a gap inside a card reads worse
+     * than slack beneath one.
+     */
+    align-self: start;
+  }
+}
