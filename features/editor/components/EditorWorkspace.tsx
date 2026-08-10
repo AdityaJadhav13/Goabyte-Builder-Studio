@@ -186,7 +186,7 @@ export function EditorWorkspace({
           {state.exportError ? <InlineError error={state.exportError} /> : null}
         </aside>
 
-        <section className="editor-preview-stage">
+        <section className="editor-preview-stage" data-format={format}>
           <div className="editor-preview-heading">
             <div>
               <p className="editor-section-kicker">Live canvas</p>
