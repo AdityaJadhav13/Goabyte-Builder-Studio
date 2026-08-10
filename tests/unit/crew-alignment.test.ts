@@ -35,4 +35,21 @@ describe('crew frame alignment', () => {
   it('centres the QR caption under the QR itself', () => {
     expect(CREW_LAYOUT.qrLabel.centreX).toBe(CREW_LAYOUT.qr.x + CREW_LAYOUT.qr.size / 2)
   })
+
+  it('keeps the QR inside the cream panel baked into the plate artwork', () => {
+    // Measured from a rendered crew export, on a clean row beneath the code.
+    const panel = { left: 1715, right: 1971, top: 55, bottom: 240 }
+    const qr = CREW_LAYOUT.qr
+    expect(qr.x).toBeGreaterThan(panel.left)
+    expect(qr.x + qr.size).toBeLessThan(panel.right)
+    expect(qr.y).toBeGreaterThan(panel.top)
+    // Must clear the caption sitting beneath it inside the same panel.
+    expect(qr.y + qr.size).toBeLessThan(CREW_LAYOUT.qrLabel.baselineY - 12)
+  })
+
+  it('centres the QR horizontally in that panel', () => {
+    const panelCentre = (1715 + 1971) / 2
+    const qrCentre = CREW_LAYOUT.qr.x + CREW_LAYOUT.qr.size / 2
+    expect(Math.abs(qrCentre - panelCentre)).toBeLessThanOrEqual(1)
+  })
 })

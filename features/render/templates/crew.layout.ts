@@ -73,9 +73,23 @@ export const CREW_LAYOUT = {
     letterSpacing: 6,
     text: 'BUILD TOGETHER · SHIP FROM GOA',
   },
-  qr: { x: 1727, y: 46, size: 164, quietModules: 4, borderWidth: 3 },
+  /*
+   * Centred in the cream panel baked into the plate artwork. Measured from a
+   * rendered export on a clean row beneath the code: the panel's inner span is
+   * x 1715–1971, so its centre is 1843.
+   *
+   * The QR previously sat at centre 1809 — 34 units left of the panel — and
+   * spanned y 46–210, poking above the panel's top edge. Reading the bounding
+   * box off the plate asset gave 1811.5, which was wrong; the surrounding
+   * artwork contains other cream pixels that widened the box. Measuring the
+   * rendered output instead gave the real number.
+   *
+   * Size trimmed 164 → 152 so the code clears the "MEET THE CREW" caption
+   * beneath it. Now x 1767–1919 (centre 1843) and y 60–212.
+   */
+  qr: { x: 1767, y: 60, size: 152, quietModules: 4, borderWidth: 3 },
   qrLabel: {
-    centreX: 1809,
+    centreX: 1843,
     baselineY: 227,
     fontFamily: FONT_STACK.text,
     fontWeight: 800,
