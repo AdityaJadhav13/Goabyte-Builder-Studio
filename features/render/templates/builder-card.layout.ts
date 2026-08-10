@@ -19,8 +19,8 @@ const labelStyle = {
   x: 134,
   fontFamily: FONT_STACK.text,
   fontWeight: 800,
-  fontSize: 13,
-  letterSpacing: 3,
+  fontSize: 15,
+  letterSpacing: 3.4,
 } as const
 
 export const CARD_LAYOUT = {
@@ -103,18 +103,61 @@ export const CARD_LAYOUT = {
     height: 34,
     radius: 8,
   },
+  /**
+   * The plate is 262 units tall and the name previously sat at 35 — smaller
+   * than the event lockup above it, in a block with ~550 units of unused
+   * width. The person is the subject of the credential, so the name is now the
+   * loudest thing on the plate: display face, more than double the size, with
+   * a floor that still admits a long one.
+   */
   identity: {
     name: {
-      label: { ...labelStyle, baselineY: 1050, text: 'BUILDER NAME' },
-      value: { ...valueStyle, topY: 1062, fontSize: 35, lineHeight: 38 },
+      label: { ...labelStyle, baselineY: 1046, text: 'BUILDER NAME' },
+      value: {
+        ...valueStyle,
+        fontFamily: FONT_STACK.display,
+        fontWeight: 400,
+        topY: 1052,
+        fontSize: 76,
+        minFontSize: 40,
+        lineHeight: 78,
+        maxWidth: 566,
+      },
     },
     role: {
-      label: { ...labelStyle, baselineY: 1142, text: 'STACK / ROLE' },
-      value: { ...valueStyle, topY: 1154 },
+      label: { ...labelStyle, baselineY: 1156, text: 'STACK / ROLE' },
+      value: { ...valueStyle, topY: 1164, fontSize: 34, lineHeight: 37 },
     },
     team: {
-      label: { ...labelStyle, baselineY: 1230, text: 'CREW / TEAM' },
-      value: { ...valueStyle, topY: 1242 },
+      label: { ...labelStyle, baselineY: 1236, text: 'CREW / TEAM' },
+      value: { ...valueStyle, topY: 1244, fontSize: 34, lineHeight: 37 },
+    },
+  },
+
+  /** Yellow rule under the name — separates the hero line from the meta. */
+  identityRule: { x: 134, y: 1136, width: 566, height: 5 },
+
+  /**
+   * A compact Hacker House Goa monogram anchoring the plate's lower-right.
+   * That corner was dead space between the team line and the plate edge.
+   */
+  identityMark: {
+    sun: {
+      centreX: 648,
+      centreY: 1206,
+      radius: 21,
+      rayLength: 13,
+      rayCount: 10,
+      strokeWidth: 3,
+    },
+    caption: {
+      centreX: 648,
+      baselineY: 1256,
+      fontFamily: FONT_STACK.text,
+      fontWeight: 800,
+      fontSize: 14,
+      letterSpacing: 2.6,
+      text: 'HH GOA',
     },
   },
   qr: {

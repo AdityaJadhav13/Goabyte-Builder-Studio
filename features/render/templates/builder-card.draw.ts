@@ -1,6 +1,11 @@
 import { BUILDER_PLATE_PATH } from '@/features/render/assets'
 import { PALETTE } from '@/lib/brand/palette'
-import { drawChip, fillRect, roundedRectPath } from '@/lib/canvas/draw-primitives'
+import {
+  drawChip,
+  drawSunMark,
+  fillRect,
+  roundedRectPath,
+} from '@/lib/canvas/draw-primitives'
 import { drawQrCode } from '@/lib/canvas/draw-qr-code'
 import { drawFittedText, fitText } from '@/lib/canvas/fit-text'
 import { cropToSourceRect } from '@/lib/image/crop-geometry'
@@ -121,8 +126,40 @@ function drawBuilderCardFront(
 
   ctx.textAlign = 'left'
   drawIdentityRow(ctx, L.identity.name, fields?.name ?? '')
+
+  // Rule beneath the name: separates the hero line from the meta rows so the
+  // plate reads as a hierarchy rather than three equal fields.
+  ctx.fillStyle = '#f8df00'
+  ctx.fillRect(
+    L.identityRule.x,
+    L.identityRule.y,
+    L.identityRule.width,
+    L.identityRule.height,
+  )
+
   drawIdentityRow(ctx, L.identity.role, fields?.role ?? '')
   drawIdentityRow(ctx, L.identity.team, fields?.team ?? '')
+
+  // Monogram in the plate's dead lower-right corner.
+  const mark = L.identityMark
+  drawSunMark(
+    ctx,
+    mark.sun.centreX,
+    mark.sun.centreY,
+    mark.sun.radius,
+    mark.sun.rayLength,
+    mark.sun.rayCount,
+    '#f8df00',
+    '#10100f',
+    mark.sun.strokeWidth,
+  )
+  ctx.textAlign = 'center'
+  ctx.fillStyle = '#10100f'
+  ctx.font = `${mark.caption.fontWeight} ${mark.caption.fontSize}px ${mark.caption.fontFamily}`
+  ctx.letterSpacing = `${mark.caption.letterSpacing}px`
+  ctx.fillText(mark.caption.text, mark.caption.centreX, mark.caption.baselineY)
+  ctx.letterSpacing = '0px'
+  ctx.textAlign = 'left'
 
   drawQrCode(ctx, BUILDER_STUDIO_QR, {
     x: L.qr.x,
