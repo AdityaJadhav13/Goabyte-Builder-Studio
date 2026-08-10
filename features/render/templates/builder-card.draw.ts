@@ -137,6 +137,15 @@ function drawBuilderCardFront(
     L.identityRule.height,
   )
 
+  // Hairline between the two meta columns.
+  ctx.fillStyle = 'rgba(16, 16, 15, 0.18)'
+  ctx.fillRect(
+    L.identityDivider.x,
+    L.identityDivider.y,
+    L.identityDivider.width,
+    L.identityDivider.height,
+  )
+
   drawIdentityRow(ctx, L.identity.role, fields?.role ?? '')
   drawIdentityRow(ctx, L.identity.team, fields?.team ?? '')
 

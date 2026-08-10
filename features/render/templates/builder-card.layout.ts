@@ -110,53 +110,73 @@ export const CARD_LAYOUT = {
    * loudest thing on the plate: display face, more than double the size, with
    * a floor that still admits a long one.
    */
+  /**
+   * The plate runs 1012 → 1274. Stacking three full-width rows pushed the crew
+   * value's baseline to ~1274 — flush with the plate edge and visibly clipped —
+   * while leaving most of the plate's width unused.
+   *
+   * Name keeps the full width as the hero. Stack and crew then sit SIDE BY
+   * SIDE: it buys back the vertical room that was clipping the last row, and
+   * fills the horizontal space that was empty. Every baseline below now has
+   * at least 70 units of clearance to the plate edge.
+   */
   identity: {
     name: {
-      label: { ...labelStyle, baselineY: 1046, text: 'BUILDER NAME' },
+      label: { ...labelStyle, baselineY: 1044, text: 'BUILDER NAME' },
       value: {
         ...valueStyle,
         fontFamily: FONT_STACK.display,
         fontWeight: 400,
-        topY: 1052,
-        fontSize: 76,
-        minFontSize: 40,
-        lineHeight: 78,
+        topY: 1050,
+        fontSize: 72,
+        minFontSize: 38,
+        lineHeight: 74,
         maxWidth: 566,
       },
     },
     role: {
-      label: { ...labelStyle, baselineY: 1156, text: 'STACK / ROLE' },
-      value: { ...valueStyle, topY: 1164, fontSize: 34, lineHeight: 37 },
+      label: { ...labelStyle, baselineY: 1162, text: 'STACK / ROLE' },
+      value: { ...valueStyle, topY: 1170, fontSize: 32, lineHeight: 34, maxWidth: 268 },
     },
     team: {
-      label: { ...labelStyle, baselineY: 1236, text: 'CREW / TEAM' },
-      value: { ...valueStyle, topY: 1244, fontSize: 34, lineHeight: 37 },
+      label: { ...labelStyle, x: 420, baselineY: 1162, text: 'CREW / TEAM' },
+      value: {
+        ...valueStyle,
+        x: 420,
+        topY: 1170,
+        fontSize: 32,
+        lineHeight: 34,
+        maxWidth: 190,
+      },
     },
   },
 
-  /** Yellow rule under the name — separates the hero line from the meta. */
-  identityRule: { x: 134, y: 1136, width: 566, height: 5 },
+  /** Yellow rule under the name — separates the hero line from the meta pair. */
+  identityRule: { x: 134, y: 1126, width: 566, height: 4 },
+
+  /** Hairline between the two meta columns, so the pairing reads deliberately. */
+  identityDivider: { x: 396, y: 1146, width: 2, height: 62 },
 
   /**
-   * A compact Hacker House Goa monogram anchoring the plate's lower-right.
-   * That corner was dead space between the team line and the plate edge.
+   * Hacker House Goa monogram, right of the meta columns. Occupies the corner
+   * the two-column row leaves free rather than competing with the name.
    */
   identityMark: {
     sun: {
-      centreX: 648,
-      centreY: 1206,
-      radius: 21,
-      rayLength: 13,
+      centreX: 656,
+      centreY: 1176,
+      radius: 18,
+      rayLength: 11,
       rayCount: 10,
       strokeWidth: 3,
     },
     caption: {
-      centreX: 648,
-      baselineY: 1256,
+      centreX: 656,
+      baselineY: 1222,
       fontFamily: FONT_STACK.text,
       fontWeight: 800,
-      fontSize: 14,
-      letterSpacing: 2.6,
+      fontSize: 13,
+      letterSpacing: 2.4,
       text: 'HH GOA',
     },
   },

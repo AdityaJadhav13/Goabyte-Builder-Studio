@@ -36,9 +36,17 @@ export const CREW_MEMBER_LAYOUTS: Readonly<
 export const CREW_LAYOUT = {
   canvas: { width, height },
   header: {
-    centreX: 975,
+    /*
+     * The canvas is 2048 wide, so its axis is 1024. This sat at 975 while the
+     * team name, kicker, roster and footer all centred on 1024 — the title was
+     * the one element 49 units off-axis, which reads as a crooked poster.
+     *
+     * maxWidth is 1300 rather than 1390: centred, 1390 would run to 1719 and
+     * collide with the QR block that starts at 1727.
+     */
+    centreX: 1024,
     baselineY: 165,
-    maxWidth: 1390,
+    maxWidth: 1300,
     fontFamily: FONT_STACK.display,
     fontWeight: 400,
     fontSize: 78,
